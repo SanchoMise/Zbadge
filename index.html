@@ -280,15 +280,15 @@
 <body>
 <div class="app">
 
-  <!-- ══ ACCUEIL ══ -->
-  <div class="view active" id="view-accueil">
-    <div class="page-title" id="accueil-title">Bonjour 👋</div>
+  <!-- ══ RÉSUMÉ ══ -->
+  <div class="view" id="view-accueil">
+    <div class="page-title" id="accueil-title">Résumé</div>
     <div id="accueil-content"><div class="loading">Chargement…</div></div>
   </div>
 
   <!-- ══ BADGE ══ -->
-  <div class="view" id="view-badge">
-    <div class="page-title">Badge</div>
+  <div class="view active" id="view-badge">
+    <div class="page-title" id="badge-title">Bonjour 👋</div>
     <div class="qr-wrap">
       <svg class="qr" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" stroke="none">
         <rect width="21" height="21" fill="white"/>
@@ -329,18 +329,18 @@
 
   <!-- ══ NAV ══ -->
   <nav class="nav">
-    <div class="nav-item active" id="nav-accueil" onclick="showView('accueil')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
-      </svg>
-      Accueil
-    </div>
-    <div class="nav-item" id="nav-badge" onclick="showView('badge')">
+    <div class="nav-item active" id="nav-badge" onclick="showView('badge')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
         <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
       </svg>
       Badge
+    </div>
+    <div class="nav-item" id="nav-accueil" onclick="showView('accueil')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+      Résumé
     </div>
     <div class="nav-item" id="nav-historique" onclick="showView('historique')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -440,7 +440,6 @@ function showView(name) {
 
 // ── Accueil ───────────────────────────────────────────────────
 async function renderAccueil() {
-  document.getElementById('accueil-title').textContent = currentUser ? `Bonjour ${currentUser} 👋` : 'Bonjour 👋';
   const el = document.getElementById('accueil-content');
   el.innerHTML = '<div class="loading">Chargement…</div>';
 
@@ -513,6 +512,7 @@ async function renderAccueil() {
 
 // ── Badge ─────────────────────────────────────────────────────
 async function renderBadge() {
+  document.getElementById('badge-title').textContent = currentUser ? `Bonjour ${currentUser} 👋` : 'Bonjour 👋';
   const lbl = document.getElementById('badge-next-label');
   const btn = document.getElementById('badge-btn');
   const div = document.getElementById('badge-today');
@@ -715,7 +715,7 @@ async function init() {
   if (!currentUser) {
     showView('reglages');
   } else {
-    renderAccueil();
+    renderBadge();
   }
 }
 
