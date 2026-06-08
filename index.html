@@ -282,7 +282,7 @@
 
   <!-- ══ ACCUEIL ══ -->
   <div class="view active" id="view-accueil">
-    <div class="page-title">Bonjour 👋</div>
+    <div class="page-title" id="accueil-title">Bonjour 👋</div>
     <div id="accueil-content"><div class="loading">Chargement…</div></div>
   </div>
 
@@ -440,6 +440,7 @@ function showView(name) {
 
 // ── Accueil ───────────────────────────────────────────────────
 async function renderAccueil() {
+  document.getElementById('accueil-title').textContent = currentUser ? `Bonjour 👋 ${currentUser}` : 'Bonjour 👋';
   const el = document.getElementById('accueil-content');
   el.innerHTML = '<div class="loading">Chargement…</div>';
 
