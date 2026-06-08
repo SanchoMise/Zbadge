@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Crèche">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="manifest.json">
+  <title>Crèche — Zélie</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --bg: #f5f5f7;
+      --card: #ffffff;
+      --text: #1d1d1f;
+      --text2: #6e6e73;
+      --accent: #007aff;
+      --green: #34c759;
+      --orange: #ff9500;
+      --red: #ff3b30;
+      --border: #e5e5ea;
+      --nav-h: 56px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    .app { display: flex; flex-direction: column; height: 100%; }
+
+    /* ── Views ── */
+    .view {
+      display: none;
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 16px 16px calc(var(--nav-h) + var(--safe-bottom) + 16px);
+    }
+    .view.active { display: block; }
+
+    .page-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      padding-top: calc(var(--safe-top) + 8px);
+    }
+
+    /* ── Bottom nav ── */
+    .nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: calc(var(--nav-h) + var(--safe-bottom));
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+      display: flex;
+      padding-bottom: var(--safe-bottom);
+      z-index: 100;
+    }
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      cursor: pointer;
+      color: var(--text2);
+      font-size: 10px;
+      padding: 6px 0;
+      transition: color .15s;
+    }
+    .nav-item.active { color: var(--accent); }
+    .nav-item svg { width: 24px; height: 24px; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .card-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 12px;
+    }
+
+    /* ── Alert strip ── */
+    .alert {
+      border-radius: 14px;
+      padding: 14px 16px;
+      font-size: 15px;
+      font-weight: 500;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .alert.green  { background: #d4f5de; color: #1a6b35; }
+    .alert.orange { background: #fff2d4; color: #7a4800; }
+    .alert.red    { background: #ffd6d6; color: #7a0000; }
+
+    /* ── Row ── */
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .row:last-child { border-bottom: none; }
+    .row-label { font-size: 15px; color: var(--text2); }
+    .row-value { font-size: 15px; font-weight: 500; }
+
+    /* ── Badge view ── */
+    .qr-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      padding: 8px 0 24px;
+    }
+    svg.qr {
+      width: 75vw; height: 75vw;
+      max-width: 280px; max-height: 280px;
+      shape-rendering: crispEdges;
+    }
+    .next-label {
+      font-size: 15px;
+      color: var(--text2);
+      text-align: center;
+    }
+    .badge-btn {
+      width: 100%;
+      padding: 16px;
+      border-radius: 14px;
+      border: none;
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--accent);
+      color: white;
+      transition: opacity .15s;
+    }
+    .badge-btn:active { opacity: .75; }
+    .badge-btn:disabled { background: var(--border); color: var(--text2); cursor: default; }
+
+    .badge-entry {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .badge-entry:last-child { border-bottom: none; }
+    .badge-type-lbl { font-size: 15px; color: var(--text2); }
+    .badge-time-val { font-size: 17px; font-weight: 600; }
+
+    /* ── Summary cells ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .sum-cell {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 14px 8px;
+      text-align: center;
+    }
+    .sum-val { font-size: 19px; font-weight: 700; }
+    .sum-lbl { font-size: 12px; color: var(--text2); margin-top: 3px; }
+
+    /* ── Histo ── */
+    .seg-ctrl {
+      display: flex;
+      background: var(--border);
+      border-radius: 10px;
+      padding: 2px;
+      margin-bottom: 16px;
+    }
+    .seg-btn {
+      flex: 1;
+      text-align: center;
+      padding: 7px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--text2);
+      transition: background .15s, color .15s;
+    }
+    .seg-btn.active { background: white; color: var(--text); }
+
+    .hrow {
+      display: grid;
+      grid-template-columns: 68px 1fr 1fr 52px;
+      gap: 2px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+      align-items: center;
+      font-size: 13px;
+    }
+    .hrow:last-child { border-bottom: none; }
+    .hrow.hdr { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; }
+    .hrow > div:not(:first-child) { text-align: right; }
+    .pos { color: var(--orange); }
+    .neg { color: var(--green); }
+
+    /* ── Réglages ── */
+    .user-row {
+      display: flex;
+      gap: 10px;
+    }
+    .user-btn {
+      flex: 1;
+      padding: 13px;
+      border-radius: 12px;
+      border: 2px solid var(--border);
+      background: var(--card);
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color .15s, color .15s;
+    }
+    .user-btn.active { border-color: var(--accent); color: var(--accent); }
+
+    .cedit-row {
+      display: grid;
+      grid-template-columns: 76px 1fr 1fr;
+      gap: 8px;
+      align-items: center;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .cedit-row:last-child { border-bottom: none; }
+    .day-lbl { font-size: 15px; font-weight: 500; }
+    .time-inp {
+      padding: 8px 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 15px;
+      text-align: center;
+      width: 100%;
+      background: var(--bg);
+    }
+    .save-btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 13px;
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 14px;
+    }
+    .save-btn:active { opacity: .8; }
+
+    .loading { text-align: center; color: var(--text2); padding: 40px 16px; font-size: 15px; }
+    .empty   { text-align: center; color: var(--text2); padding: 20px 16px; font-size: 15px; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ══ ACCUEIL ══ -->
+  <div class="view active" id="view-accueil">
+    <div class="page-title">Bonjour 👋</div>
+    <div id="accueil-content"><div class="loading">Chargement…</div></div>
+  </div>
+
+  <!-- ══ BADGE ══ -->
+  <div class="view" id="view-badge">
+    <div class="page-title">Badge</div>
+    <div class="qr-wrap">
+      <svg class="qr" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" stroke="none">
+        <rect width="21" height="21" fill="white"/>
+        <path fill="black" d="M0,0h1v1h-1zM1,0h1v1h-1zM2,0h1v1h-1zM3,0h1v1h-1zM4,0h1v1h-1zM5,0h1v1h-1zM6,0h1v1h-1zM9,0h1v1h-1zM10,0h1v1h-1zM11,0h1v1h-1zM12,0h1v1h-1zM14,0h1v1h-1zM15,0h1v1h-1zM16,0h1v1h-1zM17,0h1v1h-1zM18,0h1v1h-1zM19,0h1v1h-1zM20,0h1v1h-1zM0,1h1v1h-1zM6,1h1v1h-1zM8,1h1v1h-1zM10,1h1v1h-1zM14,1h1v1h-1zM20,1h1v1h-1zM0,2h1v1h-1zM2,2h1v1h-1zM3,2h1v1h-1zM4,2h1v1h-1zM6,2h1v1h-1zM9,2h1v1h-1zM10,2h1v1h-1zM14,2h1v1h-1zM16,2h1v1h-1zM17,2h1v1h-1zM18,2h1v1h-1zM20,2h1v1h-1zM0,3h1v1h-1zM2,3h1v1h-1zM3,3h1v1h-1zM4,3h1v1h-1zM6,3h1v1h-1zM10,3h1v1h-1zM11,3h1v1h-1zM14,3h1v1h-1zM16,3h1v1h-1zM17,3h1v1h-1zM18,3h1v1h-1zM20,3h1v1h-1zM0,4h1v1h-1zM2,4h1v1h-1zM3,4h1v1h-1zM4,4h1v1h-1zM6,4h1v1h-1zM8,4h1v1h-1zM11,4h1v1h-1zM12,4h1v1h-1zM14,4h1v1h-1zM16,4h1v1h-1zM17,4h1v1h-1zM18,4h1v1h-1zM20,4h1v1h-1zM0,5h1v1h-1zM6,5h1v1h-1zM11,5h1v1h-1zM14,5h1v1h-1zM20,5h1v1h-1zM0,6h1v1h-1zM1,6h1v1h-1zM2,6h1v1h-1zM3,6h1v1h-1zM4,6h1v1h-1zM5,6h1v1h-1zM6,6h1v1h-1zM8,6h1v1h-1zM10,6h1v1h-1zM12,6h1v1h-1zM14,6h1v1h-1zM15,6h1v1h-1zM16,6h1v1h-1zM17,6h1v1h-1zM18,6h1v1h-1zM19,6h1v1h-1zM20,6h1v1h-1zM9,7h1v1h-1zM10,7h1v1h-1zM0,8h1v1h-1zM2,8h1v1h-1zM4,8h1v1h-1zM6,8h1v1h-1zM12,8h1v1h-1zM16,8h1v1h-1zM19,8h1v1h-1zM1,9h1v1h-1zM4,9h1v1h-1zM5,9h1v1h-1zM7,9h1v1h-1zM11,9h1v1h-1zM15,9h1v1h-1zM17,9h1v1h-1zM19,9h1v1h-1zM20,9h1v1h-1zM0,10h1v1h-1zM2,10h1v1h-1zM4,10h1v1h-1zM5,10h1v1h-1zM6,10h1v1h-1zM7,10h1v1h-1zM9,10h1v1h-1zM10,10h1v1h-1zM11,10h1v1h-1zM14,10h1v1h-1zM16,10h1v1h-1zM18,10h1v1h-1zM2,11h1v1h-1zM4,11h1v1h-1zM8,11h1v1h-1zM10,11h1v1h-1zM11,11h1v1h-1zM12,11h1v1h-1zM14,11h1v1h-1zM15,11h1v1h-1zM17,11h1v1h-1zM18,11h1v1h-1zM1,12h1v1h-1zM3,12h1v1h-1zM5,12h1v1h-1zM6,12h1v1h-1zM9,12h1v1h-1zM11,12h1v1h-1zM13,12h1v1h-1zM15,12h1v1h-1zM17,12h1v1h-1zM19,12h1v1h-1zM20,12h1v1h-1zM8,13h1v1h-1zM10,13h1v1h-1zM13,13h1v1h-1zM18,13h1v1h-1zM19,13h1v1h-1zM0,14h1v1h-1zM1,14h1v1h-1zM2,14h1v1h-1zM3,14h1v1h-1zM4,14h1v1h-1zM5,14h1v1h-1zM6,14h1v1h-1zM10,14h1v1h-1zM12,14h1v1h-1zM13,14h1v1h-1zM14,14h1v1h-1zM16,14h1v1h-1zM18,14h1v1h-1zM0,15h1v1h-1zM6,15h1v1h-1zM10,15h1v1h-1zM13,15h1v1h-1zM15,15h1v1h-1zM20,15h1v1h-1zM0,16h1v1h-1zM2,16h1v1h-1zM3,16h1v1h-1zM4,16h1v1h-1zM6,16h1v1h-1zM8,16h1v1h-1zM9,16h1v1h-1zM12,16h1v1h-1zM16,16h1v1h-1zM17,16h1v1h-1zM20,16h1v1h-1zM0,17h1v1h-1zM2,17h1v1h-1zM3,17h1v1h-1zM4,17h1v1h-1zM6,17h1v1h-1zM10,17h1v1h-1zM11,17h1v1h-1zM13,17h1v1h-1zM19,17h1v1h-1zM0,18h1v1h-1zM2,18h1v1h-1zM3,18h1v1h-1zM4,18h1v1h-1zM6,18h1v1h-1zM8,18h1v1h-1zM11,18h1v1h-1zM14,18h1v1h-1zM16,18h1v1h-1zM20,18h1v1h-1zM0,19h1v1h-1zM6,19h1v1h-1zM10,19h1v1h-1zM11,19h1v1h-1zM12,19h1v1h-1zM13,19h1v1h-1zM15,19h1v1h-1zM16,19h1v1h-1zM18,19h1v1h-1zM19,19h1v1h-1zM20,19h1v1h-1zM0,20h1v1h-1zM1,20h1v1h-1zM2,20h1v1h-1zM3,20h1v1h-1zM4,20h1v1h-1zM5,20h1v1h-1zM6,20h1v1h-1zM8,20h1v1h-1zM9,20h1v1h-1zM10,20h1v1h-1zM11,20h1v1h-1zM14,20h1v1h-1zM15,20h1v1h-1zM18,20h1v1h-1zM20,20h1v1h-1z"/>
+      </svg>
+      <p class="next-label" id="badge-next-label">—</p>
+      <button class="badge-btn" id="badge-btn" onclick="doBadge()">Je badge</button>
+      <div id="badge-today" style="width:100%"></div>
+    </div>
+  </div>
+
+  <!-- ══ HISTORIQUE ══ -->
+  <div class="view" id="view-historique">
+    <div class="page-title">Historique</div>
+    <div class="seg-ctrl">
+      <div class="seg-btn active" onclick="setHistoTab('semaine',this)">Cette semaine</div>
+      <div class="seg-btn" onclick="setHistoTab('mois',this)">Ce mois</div>
+    </div>
+    <div id="histo-content"><div class="loading">Chargement…</div></div>
+  </div>
+
+  <!-- ══ RÉGLAGES ══ -->
+  <div class="view" id="view-reglages">
+    <div class="page-title">Réglages</div>
+    <div class="card">
+      <div class="card-title">Profil</div>
+      <div class="user-row">
+        <button class="user-btn" id="btn-Bertrand" onclick="setUser('Bertrand')">Bertrand</button>
+        <button class="user-btn" id="btn-Cyrielle" onclick="setUser('Cyrielle')">Cyrielle</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Contrat hebdomadaire</div>
+      <div id="contract-editor"><div class="loading">Chargement…</div></div>
+      <button class="save-btn" id="save-btn" onclick="saveContract()">Enregistrer</button>
+    </div>
+  </div>
+
+  <!-- ══ NAV ══ -->
+  <nav class="nav">
+    <div class="nav-item active" id="nav-accueil" onclick="showView('accueil')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+      Accueil
+    </div>
+    <div class="nav-item" id="nav-badge" onclick="showView('badge')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+      </svg>
+      Badge
+    </div>
+    <div class="nav-item" id="nav-historique" onclick="showView('historique')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      Historique
+    </div>
+    <div class="nav-item" id="nav-reglages" onclick="showView('reglages')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+      </svg>
+      Réglages
+    </div>
+  </nav>
+</div>
+
+<script>
+// ── Config ───────────────────────────────────────────────────
+const SB_URL = 'https://xlrnuyjlrfnlmmlkrvuf.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhscm51eWpscmZubG1tbGtydnVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MzkwNDcsImV4cCI6MjA5NjUxNTA0N30.WX_rWhKtlvgm_2vjP1YXzEqTZFWtB0wUnzQRFUu8R8A';
+
+const JOURS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];
+const DEFAULT_CONTRAT = [
+  { jour:1, heure_arrivee:'08:30', heure_depart:'17:30' },
+  { jour:2, heure_arrivee:'10:00', heure_depart:'17:30' },
+  { jour:3, heure_arrivee:'10:00', heure_depart:'18:15' },
+  { jour:4, heure_arrivee:'08:30', heure_depart:'18:15' },
+  { jour:5, heure_arrivee:'10:00', heure_depart:'18:15' },
+];
+
+let currentUser = localStorage.getItem('creche_user');
+let contrat = [];
+let histoTab = 'semaine';
+
+// ── Supabase REST ─────────────────────────────────────────────
+const H = { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' };
+
+async function sbGet(table, q='') {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}${q}`, { headers: H });
+  return r.json();
+}
+async function sbPost(table, data) {
+  return fetch(`${SB_URL}/rest/v1/${table}`, {
+    method:'POST', headers:{...H,'Prefer':'return=representation'}, body:JSON.stringify(data)
+  }).then(r=>r.json());
+}
+async function sbUpsert(table, data) {
+  return fetch(`${SB_URL}/rest/v1/${table}`, {
+    method:'POST', headers:{...H,'Prefer':'resolution=merge-duplicates,return=representation'}, body:JSON.stringify(data)
+  }).then(r=>r.json());
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+const fmt = ts => new Date(ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+const today = () => new Date().toISOString().split('T')[0];
+const t2m = t => { const [h,m]=t.split(':').map(Number); return h*60+m; };
+const m2hm = m => { const abs=Math.abs(m); return `${Math.floor(abs/60)}h${String(abs%60).padStart(2,'0')}`; };
+
+function dowISO(date) {
+  // 1=Mon … 5=Fri, 0=weekend
+  const d = new Date(typeof date==='string' ? date+'T12:00:00' : date).getDay();
+  if (d===0||d===6) return 0;
+  return d;
+}
+
+function weekStart(date=new Date()) {
+  const d = new Date(date);
+  d.setDate(d.getDate() - ((d.getDay()+6)%7));
+  d.setHours(0,0,0,0);
+  return d;
+}
+
+// ── Navigation ────────────────────────────────────────────────
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
+  ({ accueil:renderAccueil, badge:renderBadge, historique:renderHistorique, reglages:renderReglages })[name]?.();
+}
+
+// ── Accueil ───────────────────────────────────────────────────
+async function renderAccueil() {
+  const el = document.getElementById('accueil-content');
+  el.innerHTML = '<div class="loading">Chargement…</div>';
+
+  const now = new Date();
+  const dow = dowISO(now);
+
+  const [ctData, badges] = await Promise.all([
+    sbGet('contrat','?order=jour'),
+    sbGet('badges',`?timestamp=gte.${today()}T00:00:00&order=timestamp`)
+  ]);
+  contrat = ctData;
+
+  let html = '';
+
+  // ── Bloc contrat du jour ──
+  if (dow === 0) {
+    html += '<div class="card"><p class="empty">Week-end 🎉</p></div>';
+  } else {
+    const c = contrat.find(r=>r.jour===dow);
+    if (c) {
+      const arrMin = t2m(c.heure_arrivee), depMin = t2m(c.heure_depart);
+      const nowMin = now.getHours()*60 + now.getMinutes();
+      const duree = depMin - arrMin;
+
+      let alertCls, alertMsg;
+      if (nowMin < arrMin) {
+        const diff = arrMin - nowMin;
+        alertCls = diff < 30 ? 'orange' : 'green';
+        alertMsg = `🕐 Dépôt dans ${m2hm(diff)}`;
+      } else if (nowMin < depMin) {
+        const diff = depMin - nowMin;
+        alertCls = diff < 30 ? 'red' : diff < 60 ? 'orange' : 'green';
+        alertMsg = `⏰ Retrait dans ${m2hm(diff)}`;
+      } else {
+        alertCls = 'green'; alertMsg = '✅ Journée terminée';
+      }
+      html += `<div class="alert ${alertCls}">${alertMsg}</div>`;
+
+      html += `<div class="card">
+        <div class="card-title">Contrat — ${JOURS[dow-1]}</div>
+        <div class="row"><span class="row-label">Dépôt prévu</span><span class="row-value">${c.heure_arrivee}</span></div>
+        <div class="row"><span class="row-label">Retrait prévu</span><span class="row-value">${c.heure_depart}</span></div>
+        <div class="row"><span class="row-label">Durée</span><span class="row-value">${m2hm(duree)}</span></div>
+      </div>`;
+    }
+  }
+
+  // ── Badges du jour ──
+  html += `<div class="card"><div class="card-title">Badges aujourd'hui</div>`;
+  if (badges.length === 0) {
+    html += '<div class="empty">Aucun badge pour l\'instant</div>';
+  } else {
+    const byUser = {};
+    badges.forEach(b => { (byUser[b.utilisateur] ??= []).push(b); });
+    badges.forEach(b => {
+      const idx = byUser[b.utilisateur].indexOf(b);
+      const type = idx === 0 ? 'Dépôt' : 'Retrait';
+      html += `<div class="badge-entry">
+        <div>
+          <div style="font-size:15px;font-weight:500">${b.utilisateur}</div>
+          <div class="badge-type-lbl">${type}</div>
+        </div>
+        <div class="badge-time-val">${fmt(b.timestamp)}</div>
+      </div>`;
+    });
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+// ── Badge ─────────────────────────────────────────────────────
+async function renderBadge() {
+  const lbl = document.getElementById('badge-next-label');
+  const btn = document.getElementById('badge-btn');
+  const div = document.getElementById('badge-today');
+
+  if (!currentUser) {
+    lbl.textContent = 'Choisis ton profil dans Réglages';
+    btn.disabled = true;
+    div.innerHTML = '';
+    return;
+  }
+
+  const badges = await sbGet('badges', `?utilisateur=eq.${encodeURIComponent(currentUser)}&timestamp=gte.${today()}T00:00:00&order=timestamp`);
+  const nextType = badges.length % 2 === 0 ? 'Dépôt' : 'Retrait';
+  lbl.textContent = `Prochain badge : ${nextType}`;
+  btn.disabled = false;
+  btn.textContent = 'Je badge';
+
+  if (badges.length > 0) {
+    let html = '<div class="card"><div class="card-title">Mes badges aujourd\'hui</div>';
+    badges.forEach((b,i) => {
+      html += `<div class="badge-entry">
+        <span class="badge-type-lbl">${i===0?'Dépôt':'Retrait'}</span>
+        <span class="badge-time-val">${fmt(b.timestamp)}</span>
+      </div>`;
+    });
+    div.innerHTML = html + '</div>';
+  } else {
+    div.innerHTML = '';
+  }
+}
+
+async function doBadge() {
+  if (!currentUser) return;
+  const btn = document.getElementById('badge-btn');
+  btn.disabled = true;
+  btn.textContent = '…';
+  await sbPost('badges', { utilisateur: currentUser, timestamp: new Date().toISOString() });
+  await renderBadge();
+}
+
+// ── Historique ────────────────────────────────────────────────
+function setHistoTab(tab, el) {
+  histoTab = tab;
+  document.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderHistorique();
+}
+
+async function renderHistorique() {
+  const el = document.getElementById('histo-content');
+  el.innerHTML = '<div class="loading">Chargement…</div>';
+
+  const now = new Date();
+  const start = histoTab === 'semaine'
+    ? weekStart(now)
+    : new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const [ctData, badges] = await Promise.all([
+    sbGet('contrat','?order=jour'),
+    sbGet('badges', `?timestamp=gte.${start.toISOString()}&order=timestamp`)
+  ]);
+  contrat = ctData;
+
+  // Index badges by date → user → []
+  const byDate = {};
+  badges.forEach(b => {
+    const d = b.timestamp.split('T')[0];
+    (byDate[d] ??= {})[b.utilisateur] ??= [];
+    byDate[d][b.utilisateur].push(b);
+  });
+
+  // Build list of weekdays in range
+  const days = [];
+  const cur = new Date(start);
+  while (cur <= now) {
+    if (cur.getDay()>=1 && cur.getDay()<=5)
+      days.push(cur.toISOString().split('T')[0]);
+    cur.setDate(cur.getDate()+1);
+  }
+
+  let totalContrat = 0, totalReel = 0;
+
+  const rows = days.map(date => {
+    const dow = dowISO(date);
+    const c = contrat.find(r=>r.jour===dow);
+    const contratMins = c ? t2m(c.heure_depart) - t2m(c.heure_arrivee) : 0;
+    totalContrat += contratMins;
+
+    // Merge all badges for that day, take first & last
+    const allBadges = Object.values(byDate[date] ?? {}).flat()
+      .sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+
+    let reelMins = null, depotStr = '–', retraitStr = '–', deltaStr = '–', dCls = '';
+    if (allBadges.length >= 2) {
+      const first = allBadges[0], last = allBadges[allBadges.length-1];
+      reelMins = (new Date(last.timestamp)-new Date(first.timestamp))/60000;
+      totalReel += reelMins;
+      const d = reelMins - contratMins;
+      depotStr = fmt(first.timestamp);
+      retraitStr = fmt(last.timestamp);
+      deltaStr = (d>=0?'+':'-') + m2hm(d);
+      dCls = d > 5 ? 'pos' : d < -5 ? 'neg' : '';
+    } else if (allBadges.length === 1) {
+      depotStr = fmt(allBadges[0].timestamp);
+    }
+
+    const dayLabel = new Date(date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'});
+    const reelStr = reelMins !== null ? m2hm(reelMins) : '–';
+    const ctStr = c ? m2hm(contratMins) : '–';
+
+    return `<div class="hrow">
+      <div>${dayLabel}</div>
+      <div>${depotStr}<br><span style="color:var(--text2)">${retraitStr}</span></div>
+      <div>${reelStr}<br><span style="color:var(--text2)">${ctStr}</span></div>
+      <div class="${dCls}">${deltaStr}</div>
+    </div>`;
+  });
+
+  const globalDelta = totalReel - totalContrat;
+  const gCls = globalDelta > 0 ? 'pos' : globalDelta < 0 ? 'neg' : '';
+  const gSign = globalDelta >= 0 ? '+' : '-';
+
+  let html = `<div class="summary-grid">
+    <div class="sum-cell"><div class="sum-val">${m2hm(totalContrat)}</div><div class="sum-lbl">Contrat</div></div>
+    <div class="sum-cell"><div class="sum-val">${totalReel>0 ? m2hm(totalReel) : '–'}</div><div class="sum-lbl">Réel</div></div>
+    <div class="sum-cell"><div class="sum-val ${gCls}">${totalReel>0 ? gSign+m2hm(Math.abs(globalDelta)) : '–'}</div><div class="sum-lbl">Écart</div></div>
+  </div>`;
+
+  html += `<div class="card">
+    <div class="hrow hdr"><div>Jour</div><div>Dépôt / Retrait</div><div>Réel / Contrat</div><div>Écart</div></div>
+    ${rows.join('')}
+  </div>`;
+
+  el.innerHTML = html;
+}
+
+// ── Réglages ──────────────────────────────────────────────────
+async function renderReglages() {
+  ['Bertrand','Cyrielle'].forEach(n => {
+    document.getElementById('btn-'+n).classList.toggle('active', currentUser===n);
+  });
+
+  if (contrat.length === 0) {
+    contrat = await sbGet('contrat','?order=jour');
+    if (!contrat || contrat.length === 0) contrat = DEFAULT_CONTRAT;
+  }
+
+  const el = document.getElementById('contract-editor');
+  el.innerHTML = JOURS.map((nom, i) => {
+    const c = contrat.find(r=>r.jour===i+1) ?? DEFAULT_CONTRAT[i];
+    return `<div class="cedit-row">
+      <div class="day-lbl">${nom}</div>
+      <input class="time-inp" type="time" id="arr-${i+1}" value="${c.heure_arrivee}">
+      <input class="time-inp" type="time" id="dep-${i+1}" value="${c.heure_depart}">
+    </div>`;
+  }).join('');
+}
+
+function setUser(name) {
+  currentUser = name;
+  localStorage.setItem('creche_user', name);
+  ['Bertrand','Cyrielle'].forEach(n => {
+    document.getElementById('btn-'+n).classList.toggle('active', n===name);
+  });
+}
+
+async function saveContract() {
+  const btn = document.getElementById('save-btn');
+  btn.textContent = 'Enregistrement…';
+  btn.disabled = true;
+
+  const rows = JOURS.map((_,i) => ({
+    jour: i+1,
+    heure_arrivee: document.getElementById(`arr-${i+1}`).value,
+    heure_depart:  document.getElementById(`dep-${i+1}`).value,
+  }));
+
+  await sbUpsert('contrat', rows);
+  contrat = rows;
+  btn.textContent = '✓ Enregistré';
+  setTimeout(() => { btn.textContent = 'Enregistrer'; btn.disabled = false; }, 2000);
+}
+
+// ── Init ──────────────────────────────────────────────────────
+async function init() {
+  contrat = await sbGet('contrat','?order=jour');
+  if (!contrat || contrat.length === 0) {
+    await sbUpsert('contrat', DEFAULT_CONTRAT);
+    contrat = DEFAULT_CONTRAT;
+  }
+  if (!currentUser) {
+    showView('reglages');
+  } else {
+    renderAccueil();
+  }
+}
+
+init();
+</script>
+</body>
+</html>
