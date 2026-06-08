@@ -440,7 +440,7 @@ function showView(name) {
 
 // ── Accueil ───────────────────────────────────────────────────
 async function renderAccueil() {
-  document.getElementById('accueil-title').textContent = currentUser ? `Bonjour 👋 ${currentUser}` : 'Bonjour 👋';
+  document.getElementById('accueil-title').textContent = currentUser ? `Bonjour ${currentUser} 👋` : 'Bonjour 👋';
   const el = document.getElementById('accueil-content');
   el.innerHTML = '<div class="loading">Chargement…</div>';
 
