@@ -784,16 +784,16 @@ function toggleEditor(date) {
           style="flex:1;padding:8px 4px;border-radius:10px;border:2px solid var(--border);background:var(--bg);font-size:13px;font-weight:500;cursor:pointer">🔒 Fermé</button>
       </div>
       <div id="et-times-${safeDate}" style="display:none;margin-bottom:10px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div>
+        <div style="display:flex;gap:8px">
+          <div style="flex:1;min-width:0">
             <div style="font-size:12px;color:var(--text2);margin-bottom:4px">Entrée</div>
             <input type="time" id="et-in-${safeDate}" value="${c?.heure_arrivee ?? ''}"
-              style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:15px;text-align:center;background:var(--bg)">
+              style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:15px;text-align:center;background:var(--bg);box-sizing:border-box">
           </div>
-          <div>
+          <div style="flex:1;min-width:0">
             <div style="font-size:12px;color:var(--text2);margin-bottom:4px">Sortie</div>
             <input type="time" id="et-out-${safeDate}" value="${c?.heure_depart ?? ''}"
-              style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:15px;text-align:center;background:var(--bg)">
+              style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:15px;text-align:center;background:var(--bg);box-sizing:border-box">
           </div>
         </div>
       </div>
