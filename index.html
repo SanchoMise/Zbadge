@@ -510,79 +510,84 @@ async function renderAccueil() {
   el.innerHTML = html;
 }
 
+// ── Prochain jour ouvré ──────────────────────────────────────
+function nextWeekdayDow(from) {
+  const d = new Date(from);
+  do { d.setDate(d.getDate() + 1); } while (d.getDay() === 0 || d.getDay() === 6);
+  return d.getDay(); // 1–5
+}
+
 // ── Badge ─────────────────────────────────────────────────────
 async function renderBadge() {
   document.getElementById('badge-title').textContent = currentUser ? `Bonjour ${currentUser} 👋` : 'Bonjour 👋';
-  const btn = document.getElementById('badge-btn');
-  const div = document.getElementById('badge-today');
+  const btn     = document.getElementById('badge-btn');
   const alertEl = document.getElementById('badge-alert');
+  const todayEl = document.getElementById('badge-today');
+
+  // Réinitialiser dès le début pour éviter toute accumulation
+  alertEl.innerHTML = '';
+  todayEl.innerHTML = '';
 
   if (!currentUser) {
     btn.disabled = true;
-    div.innerHTML = '';
-    alertEl.innerHTML = '';
     return;
   }
 
-  const [badges, ctData] = await Promise.all([
-    sbGet('badges', `?utilisateur=eq.${encodeURIComponent(currentUser)}&timestamp=gte.${today()}T00:00:00&order=timestamp`),
-    contrat.length ? Promise.resolve(contrat) : sbGet('contrat','?order=jour')
-  ]);
-  if (!contrat.length) contrat = ctData;
+  if (contrat.length === 0) contrat = await sbGet('contrat','?order=jour');
+
+  const badges = await sbGet('badges',
+    `?utilisateur=eq.${encodeURIComponent(currentUser)}&timestamp=gte.${today()}T00:00:00&order=timestamp`);
 
   btn.disabled = false;
   btn.textContent = 'Je badge';
 
-  // ── Compte à rebours (au-dessus du QR) ──
-  const now = new Date();
-  const dow = dowISO(now);
-  const c = contrat.find(r=>r.jour===dow);
-  if (c && dow !== 0) {
-    const nowMin = now.getHours()*60 + now.getMinutes();
-    const arrMin = t2m(c.heure_arrivee);
-    const depMin = t2m(c.heure_depart);
+  // ── Bandeau heure prévue ──
+  const now    = new Date();
+  const dow    = dowISO(now);
+  const c      = contrat.find(r => r.jour === dow);
+  const nowMin = now.getHours() * 60 + now.getMinutes();
 
-    let cptLabel, cptHeure, targetMin;
-    if (nowMin < arrMin) {
-      cptLabel = 'Entrée prévue';
-      cptHeure = c.heure_arrivee;
-      targetMin = arrMin;
-    } else if (nowMin < depMin) {
-      cptLabel = 'Sortie prévue';
-      cptHeure = c.heure_depart;
-      targetMin = depMin;
-    } else {
-      cptLabel = null;
-    }
+  const journeeFinie = dow === 0
+    || (c && badges.length >= 2)
+    || (c && nowMin >= t2m(c.heure_depart));
 
-    if (cptLabel) {
-      const diff = targetMin - nowMin;
-      const cptCls = diff <= 10 ? 'red' : diff <= 20 ? 'orange' : 'green';
-      const diffTxt = diff > 0 ? `dans ${m2hm(diff)}` : `dépassée de ${m2hm(-diff)}`;
-      alertEl.innerHTML = `<div class="alert ${cptCls}" style="justify-content:space-between;margin-bottom:12px">
-        <span>${cptLabel} — <strong>${cptHeure}</strong></span>
-        <span>${diffTxt}</span>
+  if (journeeFinie) {
+    // Afficher l'entrée du prochain jour ouvré, sans décompte
+    const nextDow  = nextWeekdayDow(now);
+    const cNext    = contrat.find(r => r.jour === nextDow);
+    const demain   = nextDow === ((dow % 5) + 1) ? 'demain' : 'lundi';
+    if (cNext) {
+      alertEl.innerHTML = `<div class="alert green" style="margin-bottom:12px">
+        Entrée prévue ${demain} — <strong>${cNext.heure_arrivee}</strong>
       </div>`;
-    } else {
-      alertEl.innerHTML = `<div class="alert green" style="margin-bottom:12px">✅ Journée terminée</div>`;
     }
-  } else {
-    alertEl.innerHTML = '';
+  } else if (c) {
+    const arrMin   = t2m(c.heure_arrivee);
+    const depMin   = t2m(c.heure_depart);
+    const label    = nowMin < arrMin ? 'Entrée prévue' : 'Sortie prévue';
+    const heure    = nowMin < arrMin ? c.heure_arrivee : c.heure_depart;
+    const diff     = (nowMin < arrMin ? arrMin : depMin) - nowMin;
+    const cls      = diff <= 10 ? 'red' : diff <= 20 ? 'orange' : 'green';
+    const diffTxt  = diff > 0 ? `dans ${m2hm(diff)}` : `dépassée de ${m2hm(-diff)}`;
+    alertEl.innerHTML = `<div class="alert ${cls}" style="justify-content:space-between;margin-bottom:12px">
+      <span>${label} — <strong>${heure}</strong></span>
+      <span>${diffTxt}</span>
+    </div>`;
   }
 
-  // ── Badges du jour ──
+  // ── Badges du jour (un seul bloc) ──
   if (badges.length > 0) {
     let html = '<div class="card"><div class="card-title">Mes badges aujourd\'hui</div>';
-    badges.forEach((b,i) => {
+    badges.forEach((b, i) => {
       html += `<div class="badge-entry">
-        <span class="badge-type-lbl">${i===0?'Entrée':'Sortie'}</span>
+        <span class="badge-type-lbl">${i === 0 ? 'Entrée' : 'Sortie'}</span>
         <span style="display:flex;align-items:center;gap:12px">
           <span class="badge-time-val">${fmt(b.timestamp)}</span>
           <button onclick="deleteBadge('${b.id}')" style="border:none;background:none;color:var(--text2);font-size:20px;cursor:pointer;padding:0;line-height:1">×</button>
         </span>
       </div>`;
     });
-    div.innerHTML += html + '</div>';
+    todayEl.innerHTML = html + '</div>';
   }
 }
 
@@ -595,6 +600,21 @@ async function deleteBadge(id) {
 async function doBadge() {
   if (!currentUser) return;
   const btn = document.getElementById('badge-btn');
+
+  // Vérifier le nombre de badges du jour avant d'enregistrer
+  const existing = await sbGet('badges',
+    `?utilisateur=eq.${encodeURIComponent(currentUser)}&timestamp=gte.${today()}T00:00:00`);
+  if (existing.length >= 2) {
+    btn.textContent = '⚠️ Entrée et sortie déjà enregistrées';
+    btn.style.background = 'var(--red)';
+    setTimeout(() => {
+      btn.textContent = 'Je badge';
+      btn.style.background = '';
+      btn.disabled = false;
+    }, 3000);
+    return;
+  }
+
   btn.disabled = true;
   btn.textContent = '…';
   await sbPost('badges', { utilisateur: currentUser, timestamp: new Date().toISOString() });
