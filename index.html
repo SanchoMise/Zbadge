@@ -783,17 +783,17 @@ function toggleEditor(date) {
         <button onclick="setEditorType('${date}','ferme')" id="et-ferme-${safeDate}"
           style="flex:1;padding:8px 4px;border-radius:10px;border:2px solid var(--border);background:var(--bg);font-size:13px;font-weight:500;cursor:pointer">🔒 Fermé</button>
       </div>
-      <div id="et-times-${safeDate}" style="display:none;margin-bottom:10px">
-        <div style="display:flex;gap:8px">
-          <div style="flex:1;min-width:0">
+      <div id="et-times-${safeDate}" style="display:none;margin-bottom:10px;overflow:hidden">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;box-sizing:border-box">
+          <div style="min-width:0;overflow:hidden">
             <div style="font-size:12px;color:var(--text2);margin-bottom:4px">Entrée</div>
             <input type="time" id="et-in-${safeDate}" value="${c?.heure_arrivee ?? ''}"
-              style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:15px;text-align:center;background:var(--bg);box-sizing:border-box">
+              style="width:100%;max-width:100%;padding:6px 4px;border-radius:8px;border:1px solid var(--border);font-size:14px;text-align:center;background:var(--bg);box-sizing:border-box;display:block">
           </div>
-          <div style="flex:1;min-width:0">
+          <div style="min-width:0;overflow:hidden">
             <div style="font-size:12px;color:var(--text2);margin-bottom:4px">Sortie</div>
             <input type="time" id="et-out-${safeDate}" value="${c?.heure_depart ?? ''}"
-              style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:15px;text-align:center;background:var(--bg);box-sizing:border-box">
+              style="width:100%;max-width:100%;padding:6px 4px;border-radius:8px;border:1px solid var(--border);font-size:14px;text-align:center;background:var(--bg);box-sizing:border-box;display:block">
           </div>
         </div>
       </div>
