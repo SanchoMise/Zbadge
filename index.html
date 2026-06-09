@@ -464,20 +464,6 @@ async function renderAccueil() {
       const nowMin = now.getHours()*60 + now.getMinutes();
       const duree = depMin - arrMin;
 
-      let alertCls, alertMsg;
-      if (nowMin < arrMin) {
-        const diff = arrMin - nowMin;
-        alertCls = diff < 30 ? 'orange' : 'green';
-        alertMsg = `🕐 Entrée dans ${m2hm(diff)}`;
-      } else if (nowMin < depMin) {
-        const diff = depMin - nowMin;
-        alertCls = diff < 30 ? 'red' : diff < 60 ? 'orange' : 'green';
-        alertMsg = `⏰ Sortie dans ${m2hm(diff)}`;
-      } else {
-        alertCls = 'green'; alertMsg = '✅ Journée terminée';
-      }
-      html += `<div class="alert ${alertCls}">${alertMsg}</div>`;
-
       html += `<div class="card">
         <div class="card-title">Contrat — ${JOURS[dow-1]}</div>
         <div class="row"><span class="row-label">Entrée prévue</span><span class="row-value">${c.heure_arrivee}</span></div>
@@ -492,11 +478,8 @@ async function renderAccueil() {
   if (badges.length === 0) {
     html += '<div class="empty">Aucun badge pour l\'instant</div>';
   } else {
-    const byUser = {};
-    badges.forEach(b => { (byUser[b.utilisateur] ??= []).push(b); });
-    badges.forEach(b => {
-      const idx = byUser[b.utilisateur].indexOf(b);
-      const type = idx === 0 ? 'Entrée' : 'Sortie';
+    badges.forEach((b, i) => {
+      const type = i === 0 ? 'Entrée' : 'Sortie';
       html += `<div class="badge-entry">
         <div>
           <div style="font-size:15px;font-weight:500">${b.utilisateur}</div>
@@ -535,8 +518,15 @@ async function renderBadge() {
 
   if (contrat.length === 0) contrat = await sbGet('contrat','?order=jour');
 
-  const badges = await sbGet('badges',
-    `?utilisateur=eq.${encodeURIComponent(currentUser)}&timestamp=gte.${today()}T00:00:00&order=timestamp`);
+  // Tous les badges du jour (toutes personnes) pour déterminer entrée/sortie
+  const allBadges = await sbGet('badges',
+    `?timestamp=gte.${today()}T00:00:00&order=timestamp`);
+  // Mes badges uniquement pour l'affichage
+  const myBadges = allBadges.filter(b => b.utilisateur === currentUser);
+
+  // Index global de chaque badge (1er = Entrée, 2e = Sortie)
+  const globalIdx = {};
+  allBadges.forEach((b, i) => { globalIdx[b.id] = i; });
 
   btn.disabled = false;
   btn.textContent = 'Je badge';
@@ -548,39 +538,39 @@ async function renderBadge() {
   const nowMin = now.getHours() * 60 + now.getMinutes();
 
   const journeeFinie = dow === 0
-    || (c && badges.length >= 2)
+    || (c && allBadges.length >= 2)
     || (c && nowMin >= t2m(c.heure_depart));
 
   if (journeeFinie) {
-    // Afficher l'entrée du prochain jour ouvré, sans décompte
-    const nextDow  = nextWeekdayDow(now);
-    const cNext    = contrat.find(r => r.jour === nextDow);
-    const demain   = nextDow === ((dow % 5) + 1) ? 'demain' : 'lundi';
+    const nextDow = nextWeekdayDow(now);
+    const cNext   = contrat.find(r => r.jour === nextDow);
+    const demain  = nextDow === ((dow === 5 ? 0 : dow) + 1) ? 'demain' : 'lundi';
     if (cNext) {
       alertEl.innerHTML = `<div class="alert green" style="margin-bottom:12px">
         Entrée prévue ${demain} — <strong>${cNext.heure_arrivee}</strong>
       </div>`;
     }
   } else if (c) {
-    const arrMin   = t2m(c.heure_arrivee);
-    const depMin   = t2m(c.heure_depart);
-    const label    = nowMin < arrMin ? 'Entrée prévue' : 'Sortie prévue';
-    const heure    = nowMin < arrMin ? c.heure_arrivee : c.heure_depart;
-    const diff     = (nowMin < arrMin ? arrMin : depMin) - nowMin;
-    const cls      = diff <= 10 ? 'red' : diff <= 20 ? 'orange' : 'green';
-    const diffTxt  = diff > 0 ? `dans ${m2hm(diff)}` : `dépassée de ${m2hm(-diff)}`;
+    const arrMin  = t2m(c.heure_arrivee);
+    const depMin  = t2m(c.heure_depart);
+    const label   = allBadges.length === 0 ? 'Entrée prévue' : 'Sortie prévue';
+    const heure   = allBadges.length === 0 ? c.heure_arrivee : c.heure_depart;
+    const diff    = (allBadges.length === 0 ? arrMin : depMin) - nowMin;
+    const cls     = diff <= 10 ? 'red' : diff <= 20 ? 'orange' : 'green';
+    const diffTxt = diff > 0 ? `dans ${m2hm(diff)}` : `dépassée de ${m2hm(-diff)}`;
     alertEl.innerHTML = `<div class="alert ${cls}" style="justify-content:space-between;margin-bottom:12px">
       <span>${label} — <strong>${heure}</strong></span>
       <span>${diffTxt}</span>
     </div>`;
   }
 
-  // ── Badges du jour (un seul bloc) ──
-  if (badges.length > 0) {
+  // ── Mes badges du jour ──
+  if (myBadges.length > 0) {
     let html = '<div class="card"><div class="card-title">Mes badges aujourd\'hui</div>';
-    badges.forEach((b, i) => {
+    myBadges.forEach(b => {
+      const type = globalIdx[b.id] === 0 ? 'Entrée' : 'Sortie';
       html += `<div class="badge-entry">
-        <span class="badge-type-lbl">${i === 0 ? 'Entrée' : 'Sortie'}</span>
+        <span class="badge-type-lbl">${type}</span>
         <span style="display:flex;align-items:center;gap:12px">
           <span class="badge-time-val">${fmt(b.timestamp)}</span>
           <button onclick="deleteBadge('${b.id}')" style="border:none;background:none;color:var(--text2);font-size:20px;cursor:pointer;padding:0;line-height:1">×</button>
@@ -601,9 +591,8 @@ async function doBadge() {
   if (!currentUser) return;
   const btn = document.getElementById('badge-btn');
 
-  // Vérifier le nombre de badges du jour avant d'enregistrer
-  const existing = await sbGet('badges',
-    `?utilisateur=eq.${encodeURIComponent(currentUser)}&timestamp=gte.${today()}T00:00:00`);
+  // Vérifier le total des badges du jour (toutes personnes confondues)
+  const existing = await sbGet('badges', `?timestamp=gte.${today()}T00:00:00`);
   if (existing.length >= 2) {
     btn.textContent = '⚠️ Entrée et sortie déjà enregistrées';
     btn.style.background = 'var(--red)';
