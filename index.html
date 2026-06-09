@@ -640,61 +640,97 @@ async function renderHistorique() {
   const el = document.getElementById('histo-content');
   el.innerHTML = '<div class="loading">Chargement…</div>';
 
-  const now = new Date();
+  const now   = new Date();
   const start = histoTab === 'semaine'
     ? weekStart(now)
     : new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const [ctData, badges] = await Promise.all([
+  const startIso = start.toISOString();
+  const [ctData, badges, overrides] = await Promise.all([
     sbGet('contrat','?order=jour'),
-    sbGet('badges', `?timestamp=gte.${start.toISOString()}&order=timestamp`)
+    sbGet('badges', `?timestamp=gte.${startIso}&order=timestamp`),
+    sbGet('overrides', `?date=gte.${localDateStr(start)}&order=date`)
   ]);
   contrat = ctData;
 
-  // Index badges by date locale → user → []
+  // Index badges by local date
   const byDate = {};
   badges.forEach(b => {
     const d = tsToLocalDate(b.timestamp);
-    (byDate[d] ??= {})[b.utilisateur] ??= [];
-    byDate[d][b.utilisateur].push(b);
+    (byDate[d] ??= []).push(b);
   });
+  byDate && Object.keys(byDate).forEach(d => byDate[d].sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp)));
 
-  // Build list of weekdays in range (dates locales uniquement)
+  // Index overrides by date
+  const ovByDate = {};
+  overrides.forEach(o => { ovByDate[o.date] = o; });
+
+  // Weekdays in range
   const days = [];
   const cur = new Date(start);
   while (cur <= now) {
-    if (cur.getDay()>=1 && cur.getDay()<=5)
-      days.push(localDateStr(cur));
-    cur.setDate(cur.getDate()+1);
+    if (cur.getDay() >= 1 && cur.getDay() <= 5) days.push(localDateStr(cur));
+    cur.setDate(cur.getDate() + 1);
   }
 
   let totalContrat = 0, totalReel = 0;
 
   const cards = days.map(date => {
-    const dow = dowISO(date);
-    const c = contrat.find(r=>r.jour===dow);
+    const dow  = dowISO(date);
+    const c    = contrat.find(r => r.jour === dow);
     const contratMins = c ? t2m(c.heure_depart) - t2m(c.heure_arrivee) : 0;
-    totalContrat += contratMins;
+    const ov   = ovByDate[date];
+    const dayLabel = new Date(date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
 
-    const allBadges = Object.values(byDate[date] ?? {}).flat()
-      .sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+    let entreeReel, sortieReel, reelMins = null, delta = null, badge = '', pill = '';
 
-    let reelMins = null, delta = null;
-    const entreeReel  = allBadges.length >= 1 ? fmt(allBadges[0].timestamp) : '–';
-    const sortieReel  = allBadges.length >= 2 ? fmt(allBadges[allBadges.length-1].timestamp) : '–';
-    if (allBadges.length >= 2) {
-      reelMins = Math.round((new Date(allBadges[allBadges.length-1].timestamp) - new Date(allBadges[0].timestamp)) / 60000);
+    if (ov?.type === 'ferme') {
+      // Jour fermé — exclu des totaux
+      entreeReel = '–'; sortieReel = '–';
+      badge = '<span style="font-size:11px;background:#e5e5ea;color:#6e6e73;padding:2px 8px;border-radius:20px;font-weight:600">FERMÉ</span>';
+    } else if (ov?.type === 'absent') {
+      // Absent — compté comme contrat, écart = 0
+      totalContrat += contratMins;
+      totalReel    += contratMins;
+      entreeReel = c?.heure_arrivee ?? '–';
+      sortieReel = c?.heure_depart  ?? '–';
+      reelMins   = contratMins;
+      delta      = 0;
+      badge = '<span style="font-size:11px;background:#fff2d4;color:#7a4800;padding:2px 8px;border-radius:20px;font-weight:600">ABSENT</span>';
+    } else if (ov?.type === 'manuel') {
+      // Saisie manuelle
+      totalContrat += contratMins;
+      entreeReel = ov.heure_entree;
+      sortieReel = ov.heure_sortie;
+      reelMins   = t2m(ov.heure_sortie) - t2m(ov.heure_entree);
       totalReel += reelMins;
       delta = reelMins - contratMins;
+      badge = '<span style="font-size:11px;background:#e8f4fd;color:#0056b3;padding:2px 8px;border-radius:20px;font-weight:600">MANUEL</span>';
+    } else {
+      // Normal — badges
+      totalContrat += contratMins;
+      const allB = byDate[date] ?? [];
+      entreeReel = allB.length >= 1 ? fmt(allB[0].timestamp) : '–';
+      sortieReel = allB.length >= 2 ? fmt(allB[allB.length-1].timestamp) : '–';
+      if (allB.length >= 2) {
+        reelMins = Math.round((new Date(allB[allB.length-1].timestamp) - new Date(allB[0].timestamp)) / 60000);
+        totalReel += reelMins;
+        delta = reelMins - contratMins;
+      }
     }
 
-    const dayLabel = new Date(date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
-    const dStyle = delta === null ? '' : delta > 5 ? 'color:var(--orange);font-weight:600' : delta < -5 ? 'color:var(--green);font-weight:600' : '';
-    const deltaStr = delta !== null ? (delta>=0?'+':'-')+m2hm(Math.abs(delta)) : '–';
+    const dStyle   = delta === null ? '' : delta > 5 ? 'color:var(--orange);font-weight:600' : delta < -5 ? 'color:var(--green);font-weight:600' : '';
+    const deltaStr = delta !== null ? (delta >= 0 ? '+' : '-') + m2hm(Math.abs(delta)) : '–';
+    const safeDate = date.replace(/-/g,'_');
 
-    return `<div class="card" style="margin-bottom:10px">
-      <div style="font-size:15px;font-weight:600;margin-bottom:10px;text-transform:capitalize">${dayLabel}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;font-size:13px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">
+    return `<div class="card" style="margin-bottom:10px" id="card-${safeDate}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:15px;font-weight:600;text-transform:capitalize">${dayLabel} ${badge}</div>
+        <button onclick="toggleEditor('${date}')" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--text2);padding:0 0 0 8px">✏️</button>
+      </div>
+      <div id="editor-${safeDate}" style="display:none"></div>
+      ${ov?.type === 'ferme' ? `<div class="empty" style="padding:8px 0">Journée non comptabilisée</div>` : `
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">
         <div></div><div style="text-align:center">Prévu</div><div style="text-align:center">Réel</div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
@@ -710,23 +746,101 @@ async function renderHistorique() {
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;align-items:center;padding:6px 0">
         <div style="font-size:13px;color:var(--text2)">Durée</div>
         <div style="text-align:center;font-size:15px">${c ? m2hm(contratMins) : '–'}</div>
-        <div style="text-align:center;font-size:15px;font-weight:600;${dStyle}">${reelMins !== null ? m2hm(reelMins) : '–'} ${deltaStr !== '–' ? '<span style="font-size:12px">('+deltaStr+')</span>' : ''}</div>
-      </div>
+        <div style="text-align:center;font-size:15px;font-weight:600;${dStyle}">${reelMins !== null ? m2hm(reelMins) : '–'}${deltaStr !== '–' ? ' <span style="font-size:12px">('+deltaStr+')</span>' : ''}</div>
+      </div>`}
     </div>`;
   });
 
   const globalDelta = totalReel - totalContrat;
-  const gCls = globalDelta > 0 ? 'pos' : globalDelta < 0 ? 'neg' : '';
+  const gCls  = globalDelta > 0 ? 'pos' : globalDelta < 0 ? 'neg' : '';
   const gSign = globalDelta >= 0 ? '+' : '-';
 
   let html = `<div class="summary-grid">
     <div class="sum-cell"><div class="sum-val">${m2hm(totalContrat)}</div><div class="sum-lbl">Contrat</div></div>
-    <div class="sum-cell"><div class="sum-val">${totalReel>0 ? m2hm(totalReel) : '–'}</div><div class="sum-lbl">Réel</div></div>
-    <div class="sum-cell"><div class="sum-val ${gCls}">${totalReel>0 ? gSign+m2hm(Math.abs(globalDelta)) : '–'}</div><div class="sum-lbl">Écart</div></div>
+    <div class="sum-cell"><div class="sum-val">${totalReel > 0 ? m2hm(totalReel) : '–'}</div><div class="sum-lbl">Réel</div></div>
+    <div class="sum-cell"><div class="sum-val ${gCls}">${totalReel > 0 ? gSign + m2hm(Math.abs(globalDelta)) : '–'}</div><div class="sum-lbl">Écart</div></div>
   </div>`;
-
   html += cards.join('');
   el.innerHTML = html;
+}
+
+// ── Éditeur de jour ───────────────────────────────────────────
+function toggleEditor(date) {
+  const safeDate = date.replace(/-/g,'_');
+  const el = document.getElementById(`editor-${safeDate}`);
+  if (!el) return;
+  if (el.style.display !== 'none') { el.style.display = 'none'; return; }
+
+  const c = contrat.find(r => r.jour === dowISO(date));
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div style="border-top:1px solid var(--border);padding:12px 0;margin-bottom:8px">
+      <div style="display:flex;gap:6px;margin-bottom:12px">
+        <button onclick="setEditorType('${date}','manuel')" id="et-manuel-${safeDate}"
+          style="flex:1;padding:8px 4px;border-radius:10px;border:2px solid var(--border);background:var(--bg);font-size:13px;font-weight:500;cursor:pointer">✏️ Manuel</button>
+        <button onclick="setEditorType('${date}','absent')" id="et-absent-${safeDate}"
+          style="flex:1;padding:8px 4px;border-radius:10px;border:2px solid var(--border);background:var(--bg);font-size:13px;font-weight:500;cursor:pointer">🏠 Absent</button>
+        <button onclick="setEditorType('${date}','ferme')" id="et-ferme-${safeDate}"
+          style="flex:1;padding:8px 4px;border-radius:10px;border:2px solid var(--border);background:var(--bg);font-size:13px;font-weight:500;cursor:pointer">🔒 Fermé</button>
+      </div>
+      <div id="et-times-${safeDate}" style="display:none;margin-bottom:10px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:4px">Entrée</div>
+            <input type="time" id="et-in-${safeDate}" value="${c?.heure_arrivee ?? ''}"
+              style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:15px;text-align:center;background:var(--bg)">
+          </div>
+          <div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:4px">Sortie</div>
+            <input type="time" id="et-out-${safeDate}" value="${c?.heure_depart ?? ''}"
+              style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:15px;text-align:center;background:var(--bg)">
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button id="et-save-${safeDate}" onclick="saveOverride('${date}')" disabled
+          style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--accent);color:white;font-size:15px;font-weight:600;cursor:pointer;opacity:.4">Enregistrer</button>
+        <button onclick="deleteOverride('${date}')"
+          style="padding:10px 14px;border-radius:10px;border:none;background:var(--border);color:var(--text2);font-size:15px;cursor:pointer">🗑</button>
+      </div>
+    </div>`;
+}
+
+let editorType = {};
+function setEditorType(date, type) {
+  const safeDate = date.replace(/-/g,'_');
+  editorType[date] = type;
+  ['manuel','absent','ferme'].forEach(t => {
+    const btn = document.getElementById(`et-${t}-${safeDate}`);
+    if (btn) btn.style.borderColor = t === type ? 'var(--accent)' : 'var(--border)';
+  });
+  const times = document.getElementById(`et-times-${safeDate}`);
+  if (times) times.style.display = type === 'manuel' ? 'block' : 'none';
+  const save = document.getElementById(`et-save-${safeDate}`);
+  if (save) { save.disabled = false; save.style.opacity = '1'; }
+}
+
+async function saveOverride(date) {
+  const safeDate = date.replace(/-/g,'_');
+  const type = editorType[date];
+  if (!type) return;
+  const data = { date, type };
+  if (type === 'manuel') {
+    data.heure_entree = document.getElementById(`et-in-${safeDate}`).value;
+    data.heure_sortie = document.getElementById(`et-out-${safeDate}`).value;
+    if (!data.heure_entree || !data.heure_sortie) return;
+  }
+  const btn = document.getElementById(`et-save-${safeDate}`);
+  btn.textContent = '…';
+  await sbUpsert('overrides', data);
+  delete editorType[date];
+  renderHistorique();
+}
+
+async function deleteOverride(date) {
+  await sbDelete('overrides', `?date=eq.${date}`);
+  delete editorType[date];
+  renderHistorique();
 }
 
 // ── Réglages ──────────────────────────────────────────────────
