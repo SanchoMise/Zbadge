@@ -468,11 +468,11 @@ async function renderAccueil() {
       if (nowMin < arrMin) {
         const diff = arrMin - nowMin;
         alertCls = diff < 30 ? 'orange' : 'green';
-        alertMsg = `🕐 Dépôt dans ${m2hm(diff)}`;
+        alertMsg = `🕐 Entrée dans ${m2hm(diff)}`;
       } else if (nowMin < depMin) {
         const diff = depMin - nowMin;
         alertCls = diff < 30 ? 'red' : diff < 60 ? 'orange' : 'green';
-        alertMsg = `⏰ Retrait dans ${m2hm(diff)}`;
+        alertMsg = `⏰ Sortie dans ${m2hm(diff)}`;
       } else {
         alertCls = 'green'; alertMsg = '✅ Journée terminée';
       }
@@ -480,8 +480,8 @@ async function renderAccueil() {
 
       html += `<div class="card">
         <div class="card-title">Contrat — ${JOURS[dow-1]}</div>
-        <div class="row"><span class="row-label">Dépôt prévu</span><span class="row-value">${c.heure_arrivee}</span></div>
-        <div class="row"><span class="row-label">Retrait prévu</span><span class="row-value">${c.heure_depart}</span></div>
+        <div class="row"><span class="row-label">Entrée prévue</span><span class="row-value">${c.heure_arrivee}</span></div>
+        <div class="row"><span class="row-label">Sortie prévue</span><span class="row-value">${c.heure_depart}</span></div>
         <div class="row"><span class="row-label">Durée</span><span class="row-value">${m2hm(duree)}</span></div>
       </div>`;
     }
@@ -496,7 +496,7 @@ async function renderAccueil() {
     badges.forEach(b => { (byUser[b.utilisateur] ??= []).push(b); });
     badges.forEach(b => {
       const idx = byUser[b.utilisateur].indexOf(b);
-      const type = idx === 0 ? 'Dépôt' : 'Retrait';
+      const type = idx === 0 ? 'Entrée' : 'Sortie';
       html += `<div class="badge-entry">
         <div>
           <div style="font-size:15px;font-weight:500">${b.utilisateur}</div>
@@ -524,26 +524,70 @@ async function renderBadge() {
     return;
   }
 
-  const badges = await sbGet('badges', `?utilisateur=eq.${encodeURIComponent(currentUser)}&timestamp=gte.${today()}T00:00:00&order=timestamp`);
-  const nextType = badges.length % 2 === 0 ? 'Dépôt' : 'Retrait';
+  const [badges, ctData] = await Promise.all([
+    sbGet('badges', `?utilisateur=eq.${encodeURIComponent(currentUser)}&timestamp=gte.${today()}T00:00:00&order=timestamp`),
+    contrat.length ? Promise.resolve(contrat) : sbGet('contrat','?order=jour')
+  ]);
+  if (!contrat.length) contrat = ctData;
+
+  const nextType = badges.length % 2 === 0 ? 'Entrée' : 'Sortie';
   lbl.textContent = `Prochain badge : ${nextType}`;
   btn.disabled = false;
   btn.textContent = 'Je badge';
 
+  // ── Compte à rebours ──
+  const now = new Date();
+  const dow = dowISO(now);
+  const c = contrat.find(r=>r.jour===dow);
+  if (c && dow !== 0) {
+    const nowMin = now.getHours()*60 + now.getMinutes();
+    const arrMin = t2m(c.heure_arrivee);
+    const depMin = t2m(c.heure_depart);
+
+    let cptLabel, cptHeure, cptCls;
+    if (nowMin < arrMin) {
+      const diff = arrMin - nowMin;
+      cptLabel = 'Entrée prévue';
+      cptHeure = c.heure_arrivee;
+      cptCls = diff <= 10 ? 'red' : diff <= 20 ? 'orange' : 'green';
+    } else if (nowMin < depMin) {
+      const diff = depMin - nowMin;
+      cptLabel = 'Sortie prévue';
+      cptHeure = c.heure_depart;
+      cptCls = diff <= 10 ? 'red' : diff <= 20 ? 'orange' : 'green';
+    } else {
+      cptLabel = null;
+    }
+
+    if (cptLabel) {
+      const nowMin2 = now.getHours()*60 + now.getMinutes();
+      const targetMin = cptLabel === 'Entrée prévue' ? arrMin : depMin;
+      const diff = targetMin - nowMin2;
+      const diffTxt = diff > 0 ? `dans ${m2hm(diff)}` : `dépassée de ${m2hm(-diff)}`;
+      div.innerHTML = `<div class="alert ${cptCls}" style="justify-content:space-between;width:100%">
+        <span>${cptLabel} — <strong>${cptHeure}</strong></span>
+        <span>${diffTxt}</span>
+      </div>`;
+    } else {
+      div.innerHTML = `<div class="alert green" style="width:100%">✅ Journée terminée</div>`;
+    }
+  } else {
+    div.innerHTML = '';
+  }
+
+  // ── Badges du jour ──
   if (badges.length > 0) {
     let html = '<div class="card"><div class="card-title">Mes badges aujourd\'hui</div>';
     badges.forEach((b,i) => {
       html += `<div class="badge-entry">
-        <span class="badge-type-lbl">${i===0?'Dépôt':'Retrait'}</span>
+        <span class="badge-type-lbl">${i===0?'Entrée':'Sortie'}</span>
         <span style="display:flex;align-items:center;gap:12px">
           <span class="badge-time-val">${fmt(b.timestamp)}</span>
           <button onclick="deleteBadge('${b.id}')" style="border:none;background:none;color:var(--text2);font-size:20px;cursor:pointer;padding:0;line-height:1">×</button>
         </span>
       </div>`;
     });
-    div.innerHTML = html + '</div>';
-  } else {
-    div.innerHTML = '';
+    div.innerHTML += html + '</div>';
   }
 }
 
@@ -614,18 +658,18 @@ async function renderHistorique() {
     const allBadges = Object.values(byDate[date] ?? {}).flat()
       .sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
 
-    let reelMins = null, depotStr = '–', retraitStr = '–', deltaStr = '–', dCls = '';
+    let reelMins = null, entreeStr = '–', sortieStr = '–', deltaStr = '–', dCls = '';
     if (allBadges.length >= 2) {
       const first = allBadges[0], last = allBadges[allBadges.length-1];
       reelMins = (new Date(last.timestamp)-new Date(first.timestamp))/60000;
       totalReel += reelMins;
       const d = reelMins - contratMins;
-      depotStr = fmt(first.timestamp);
-      retraitStr = fmt(last.timestamp);
+      entreeStr = fmt(first.timestamp);
+      sortieStr = fmt(last.timestamp);
       deltaStr = (d>=0?'+':'-') + m2hm(d);
       dCls = d > 5 ? 'pos' : d < -5 ? 'neg' : '';
     } else if (allBadges.length === 1) {
-      depotStr = fmt(allBadges[0].timestamp);
+      entreeStr = fmt(allBadges[0].timestamp);
     }
 
     const dayLabel = new Date(date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'});
@@ -634,7 +678,7 @@ async function renderHistorique() {
 
     return `<div class="hrow">
       <div>${dayLabel}</div>
-      <div>${depotStr}<br><span style="color:var(--text2)">${retraitStr}</span></div>
+      <div>${entreeStr}<br><span style="color:var(--text2)">${sortieStr}</span></div>
       <div>${reelStr}<br><span style="color:var(--text2)">${ctStr}</span></div>
       <div class="${dCls}">${deltaStr}</div>
     </div>`;
@@ -651,7 +695,7 @@ async function renderHistorique() {
   </div>`;
 
   html += `<div class="card">
-    <div class="hrow hdr"><div>Jour</div><div>Dépôt / Retrait</div><div>Réel / Contrat</div><div>Écart</div></div>
+    <div class="hrow hdr"><div>Jour</div><div>Entrée / Sortie</div><div>Réel / Contrat</div><div>Écart</div></div>
     ${rows.join('')}
   </div>`;
 
@@ -674,8 +718,8 @@ async function renderReglages() {
     const c = contrat.find(r=>r.jour===i+1) ?? DEFAULT_CONTRAT[i];
     return `<div class="cedit-row">
       <div class="day-lbl">${nom}</div>
-      <input class="time-inp" type="time" id="arr-${i+1}" value="${c.heure_arrivee}">
-      <input class="time-inp" type="time" id="dep-${i+1}" value="${c.heure_depart}">
+      <input class="time-inp" type="time" id="arr-${i+1}" value="${c.heure_arrivee}" title="Entrée">
+      <input class="time-inp" type="time" id="dep-${i+1}" value="${c.heure_depart}" title="Sortie">
     </div>`;
   }).join('');
 }
