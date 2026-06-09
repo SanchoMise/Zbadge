@@ -473,7 +473,7 @@ async function renderAccueil() {
     }
   }
 
-  // ── Badges du jour ──
+  // ── Badges du jour + bilan si journée complète ──
   html += `<div class="card"><div class="card-title">Badges aujourd'hui</div>`;
   if (badges.length === 0) {
     html += '<div class="empty">Aucun badge pour l\'instant</div>';
@@ -490,6 +490,24 @@ async function renderAccueil() {
     });
   }
   html += '</div>';
+
+  // ── Bilan du jour si entrée + sortie enregistrées ──
+  if (badges.length >= 2 && dow !== 0) {
+    const c = contrat.find(r => r.jour === dow);
+    if (c) {
+      const reelMins   = Math.round((new Date(badges[badges.length-1].timestamp) - new Date(badges[0].timestamp)) / 60000);
+      const contratMins = t2m(c.heure_depart) - t2m(c.heure_arrivee);
+      const delta       = reelMins - contratMins;
+      const dCls        = delta > 5 ? 'color:var(--orange)' : delta < -5 ? 'color:var(--green)' : 'color:var(--text)';
+      const dSign       = delta >= 0 ? '+' : '-';
+      html += `<div class="card">
+        <div class="card-title">Bilan du jour</div>
+        <div class="row"><span class="row-label">Temps réel</span><span class="row-value">${m2hm(reelMins)}</span></div>
+        <div class="row"><span class="row-label">Temps contrat</span><span class="row-value">${m2hm(contratMins)}</span></div>
+        <div class="row"><span class="row-label">Écart</span><span class="row-value" style="${dCls}">${dSign}${m2hm(Math.abs(delta))}</span></div>
+      </div>`;
+    }
+  }
   el.innerHTML = html;
 }
 
@@ -652,39 +670,48 @@ async function renderHistorique() {
 
   let totalContrat = 0, totalReel = 0;
 
-  const rows = days.map(date => {
+  const cards = days.map(date => {
     const dow = dowISO(date);
     const c = contrat.find(r=>r.jour===dow);
     const contratMins = c ? t2m(c.heure_depart) - t2m(c.heure_arrivee) : 0;
     totalContrat += contratMins;
 
-    // Merge all badges for that day, take first & last
     const allBadges = Object.values(byDate[date] ?? {}).flat()
       .sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
 
-    let reelMins = null, entreeStr = '–', sortieStr = '–', deltaStr = '–', dCls = '';
+    let reelMins = null, delta = null;
+    const entreeReel  = allBadges.length >= 1 ? fmt(allBadges[0].timestamp) : '–';
+    const sortieReel  = allBadges.length >= 2 ? fmt(allBadges[allBadges.length-1].timestamp) : '–';
     if (allBadges.length >= 2) {
-      const first = allBadges[0], last = allBadges[allBadges.length-1];
-      reelMins = (new Date(last.timestamp)-new Date(first.timestamp))/60000;
+      reelMins = Math.round((new Date(allBadges[allBadges.length-1].timestamp) - new Date(allBadges[0].timestamp)) / 60000);
       totalReel += reelMins;
-      const d = reelMins - contratMins;
-      entreeStr = fmt(first.timestamp);
-      sortieStr = fmt(last.timestamp);
-      deltaStr = (d>=0?'+':'-') + m2hm(d);
-      dCls = d > 5 ? 'pos' : d < -5 ? 'neg' : '';
-    } else if (allBadges.length === 1) {
-      entreeStr = fmt(allBadges[0].timestamp);
+      delta = reelMins - contratMins;
     }
 
-    const dayLabel = new Date(date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'});
-    const reelStr = reelMins !== null ? m2hm(reelMins) : '–';
-    const ctStr = c ? m2hm(contratMins) : '–';
+    const dayLabel = new Date(date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+    const dStyle = delta === null ? '' : delta > 5 ? 'color:var(--orange);font-weight:600' : delta < -5 ? 'color:var(--green);font-weight:600' : '';
+    const deltaStr = delta !== null ? (delta>=0?'+':'-')+m2hm(Math.abs(delta)) : '–';
 
-    return `<div class="hrow">
-      <div>${dayLabel}</div>
-      <div>${entreeStr}<br><span style="color:var(--text2)">${sortieStr}</span></div>
-      <div>${reelStr}<br><span style="color:var(--text2)">${ctStr}</span></div>
-      <div class="${dCls}">${deltaStr}</div>
+    return `<div class="card" style="margin-bottom:10px">
+      <div style="font-size:15px;font-weight:600;margin-bottom:10px;text-transform:capitalize">${dayLabel}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;font-size:13px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">
+        <div></div><div style="text-align:center">Prévu</div><div style="text-align:center">Réel</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:13px;color:var(--text2)">Entrée</div>
+        <div style="text-align:center;font-size:15px">${c ? c.heure_arrivee : '–'}</div>
+        <div style="text-align:center;font-size:15px;font-weight:500">${entreeReel}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:13px;color:var(--text2)">Sortie</div>
+        <div style="text-align:center;font-size:15px">${c ? c.heure_depart : '–'}</div>
+        <div style="text-align:center;font-size:15px;font-weight:500">${sortieReel}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;align-items:center;padding:6px 0">
+        <div style="font-size:13px;color:var(--text2)">Durée</div>
+        <div style="text-align:center;font-size:15px">${c ? m2hm(contratMins) : '–'}</div>
+        <div style="text-align:center;font-size:15px;font-weight:600;${dStyle}">${reelMins !== null ? m2hm(reelMins) : '–'} ${deltaStr !== '–' ? '<span style="font-size:12px">('+deltaStr+')</span>' : ''}</div>
+      </div>
     </div>`;
   });
 
@@ -698,11 +725,7 @@ async function renderHistorique() {
     <div class="sum-cell"><div class="sum-val ${gCls}">${totalReel>0 ? gSign+m2hm(Math.abs(globalDelta)) : '–'}</div><div class="sum-lbl">Écart</div></div>
   </div>`;
 
-  html += `<div class="card">
-    <div class="hrow hdr"><div>Jour</div><div>Entrée / Sortie</div><div>Réel / Contrat</div><div>Écart</div></div>
-    ${rows.join('')}
-  </div>`;
-
+  html += cards.join('');
   el.innerHTML = html;
 }
 
