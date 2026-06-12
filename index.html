@@ -555,17 +555,26 @@ async function renderBadge() {
   const c      = contrat.find(r => r.jour === dow);
   const nowMin = now.getHours() * 60 + now.getMinutes();
 
-  const journeeFinie = dow === 0
-    || (c && allBadges.length >= 2)
-    || (c && nowMin >= t2m(c.heure_depart));
+  // Journée finie = 2 badges enregistrés (pas juste l'heure dépassée)
+  const journeeFinie = allBadges.length >= 2;
 
-  if (journeeFinie) {
-    const nextDow = nextWeekdayDow(now);
-    const cNext   = contrat.find(r => r.jour === nextDow);
-    const demain  = nextDow === ((dow === 5 ? 0 : dow) + 1) ? 'demain' : 'lundi';
+  if (dow === 0 || journeeFinie) {
+    // Afficher l'entrée du prochain jour ouvré
+    const nextDow  = nextWeekdayDow(now);
+    const cNext    = contrat.find(r => r.jour === nextDow);
+    // "demain" uniquement si le lendemain calendaire est un jour ouvré
+    const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextLabel = localDateStr(tomorrow) && nextDow === tomorrow.getDay()
+      ? 'demain'
+      : new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate() + (nextDow - tomorrow.getDay() + 7) % 7)
+          .toLocaleDateString('fr-FR', { weekday: 'long' });
+    // Calcul simple : si demain est lundi-vendredi → "demain", sinon nom du jour
+    const tomorrowDow = tomorrow.getDay();
+    const jourLabel = (tomorrowDow >= 1 && tomorrowDow <= 5) ? 'demain' :
+      ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'][nextDow];
     if (cNext) {
       alertEl.innerHTML = `<div class="alert green" style="margin-bottom:12px">
-        Entrée prévue ${demain} — <strong>${cNext.heure_arrivee}</strong>
+        Entrée prévue ${jourLabel} — <strong>${cNext.heure_arrivee}</strong>
       </div>`;
     }
   } else if (c) {
@@ -574,7 +583,8 @@ async function renderBadge() {
     const label   = allBadges.length === 0 ? 'Entrée prévue' : 'Sortie prévue';
     const heure   = allBadges.length === 0 ? c.heure_arrivee : c.heure_depart;
     const diff    = (allBadges.length === 0 ? arrMin : depMin) - nowMin;
-    const cls     = diff <= 10 ? 'red' : diff <= 20 ? 'orange' : 'green';
+    // Vert > 20min, orange entre 20min et 0, rouge si dépassé
+    const cls     = diff < 0 ? 'red' : diff <= 20 ? 'orange' : 'green';
     const diffTxt = diff > 0 ? `dans ${m2hm(diff)}` : `dépassée de ${m2hm(-diff)}`;
     alertEl.innerHTML = `<div class="alert ${cls}" style="justify-content:space-between;margin-bottom:12px">
       <span>${label} — <strong>${heure}</strong></span>
