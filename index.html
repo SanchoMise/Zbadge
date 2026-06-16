@@ -278,6 +278,10 @@
   </style>
 </head>
 <body>
+<!-- Astuce retour haptique iOS 17.4+ : basculer un switch déclenche une vibration -->
+<label id="haptic-label" aria-hidden="true" style="position:absolute;left:-9999px;width:0;height:0;overflow:hidden">
+  <input type="checkbox" switch id="haptic-switch">
+</label>
 <div class="app">
 
   <!-- ══ RÉSUMÉ ══ -->
@@ -656,9 +660,16 @@ async function deleteBadge(id) {
   await renderBadge();
 }
 
+function haptic() {
+  // Android : API Vibration
+  navigator.vibrate?.(50);
+  // iOS 17.4+ : basculer un <input switch> via son label déclenche un retour haptique
+  try { document.getElementById('haptic-label')?.click(); } catch {}
+}
+
 async function doBadge() {
   if (!currentUser) return;
-  navigator.vibrate?.(50);
+  haptic();
   const btn = document.getElementById('badge-btn');
 
   // Vérifier le total des badges du jour (toutes personnes confondues)
