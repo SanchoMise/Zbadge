@@ -518,8 +518,20 @@ function nextWeekdayDow(from) {
   return d.getDay(); // 1–5
 }
 
+// ── Cache localStorage ────────────────────────────────────────
+function cacheSet(key, data) {
+  try { localStorage.setItem(key, JSON.stringify({ d: data, t: Date.now() })); } catch {}
+}
+function cacheGet(key, maxAgeMs = 60000) {
+  try {
+    const v = JSON.parse(localStorage.getItem(key));
+    if (v && Date.now() - v.t < maxAgeMs) return v.d;
+  } catch {}
+  return null;
+}
+
 // ── Badge ─────────────────────────────────────────────────────
-async function renderBadge() {
+async function renderBadge(fromCache = false) {
   document.getElementById('badge-title').textContent = currentUser ? `Bonjour ${currentUser} 👋` : 'Bonjour 👋';
   const btn     = document.getElementById('badge-btn');
   const alertEl = document.getElementById('badge-alert');
@@ -534,11 +546,39 @@ async function renderBadge() {
     return;
   }
 
-  if (contrat.length === 0) contrat = await sbGet('contrat','?order=jour');
+  // Contrat : cache 24h (change rarement)
+  if (contrat.length === 0) {
+    contrat = cacheGet('contrat', 86400000) ?? [];
+    if (contrat.length === 0) {
+      contrat = await sbGet('contrat','?order=jour');
+      cacheSet('contrat', contrat);
+    }
+  }
 
-  // Tous les badges du jour (toutes personnes) pour déterminer entrée/sortie
-  const allBadges = await sbGet('badges',
-    `?timestamp=gte.${today()}T00:00:00&order=timestamp`);
+  // Badges du jour : affichage immédiat depuis cache (max 30s), puis rafraîchissement réseau
+  const cacheKey = `badges_${today()}`;
+  let allBadges = cacheGet(cacheKey, 30000) ?? [];
+  const hasCache = allBadges.length > 0 || localStorage.getItem(cacheKey);
+
+  if (!hasCache) {
+    // Pas de cache : attendre le réseau normalement
+    allBadges = await sbGet('badges', `?timestamp=gte.${today()}T00:00:00&order=timestamp`);
+    cacheSet(cacheKey, allBadges);
+  } else {
+    // Affichage immédiat avec cache, rafraîchissement en arrière-plan
+    renderBadgeContent(allBadges, contrat, btn, alertEl, todayEl);
+    sbGet('badges', `?timestamp=gte.${today()}T00:00:00&order=timestamp`).then(fresh => {
+      cacheSet(cacheKey, fresh);
+      if (JSON.stringify(fresh) !== JSON.stringify(allBadges))
+        renderBadgeContent(fresh, contrat, btn, alertEl, todayEl);
+    });
+    return;
+  }
+
+  renderBadgeContent(allBadges, contrat, btn, alertEl, todayEl);
+}
+
+function renderBadgeContent(allBadges, contrat, btn, alertEl, todayEl) {
   // Mes badges uniquement pour l'affichage
   const myBadges = allBadges.filter(b => b.utilisateur === currentUser);
 
@@ -607,16 +647,18 @@ async function renderBadge() {
     });
     todayEl.innerHTML = html + '</div>';
   }
-}
+} // fin renderBadgeContent
 
 async function deleteBadge(id) {
   if (!confirm('Supprimer ce badge ?')) return;
   await sbDelete('badges', `?id=eq.${id}`);
+  localStorage.removeItem(`badges_${today()}`);
   await renderBadge();
 }
 
 async function doBadge() {
   if (!currentUser) return;
+  navigator.vibrate?.(50);
   const btn = document.getElementById('badge-btn');
 
   // Vérifier le total des badges du jour (toutes personnes confondues)
@@ -635,6 +677,7 @@ async function doBadge() {
   btn.disabled = true;
   btn.textContent = '…';
   await sbPost('badges', { utilisateur: currentUser, timestamp: new Date().toISOString() });
+  localStorage.removeItem(`badges_${today()}`);
   await renderBadge();
 }
 
