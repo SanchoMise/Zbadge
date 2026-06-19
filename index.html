@@ -403,6 +403,11 @@ async function sbUpsert(table, data) {
     method:'POST', headers:{...H,'Prefer':'resolution=merge-duplicates,return=representation'}, body:JSON.stringify(data)
   }).then(r=>r.json());
 }
+async function sbPatch(table, q, data) {
+  return fetch(`${SB_URL}/rest/v1/${table}${q}`, {
+    method:'PATCH', headers:{...H,'Prefer':'return=representation'}, body:JSON.stringify(data)
+  }).then(r=>r.json());
+}
 async function sbDelete(table, q) {
   return fetch(`${SB_URL}/rest/v1/${table}${q}`, {
     method:'DELETE', headers: H
@@ -650,7 +655,7 @@ function renderBadgeContent(allBadges, contrat, btn, alertEl, todayEl) {
       html += `<div class="badge-entry">
         <span class="badge-type-lbl">${type}</span>
         <span style="display:flex;align-items:center;gap:12px">
-          <span class="badge-time-val">${fmt(b.timestamp)}</span>
+          <span class="badge-time-val" onclick="editBadgeTime('${b.id}','${b.timestamp}')" style="cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px">${fmt(b.timestamp)}</span>
           <button onclick="deleteBadge('${b.id}')" style="border:none;background:none;color:var(--text2);font-size:20px;cursor:pointer;padding:0;line-height:1">×</button>
         </span>
       </div>`;
@@ -662,6 +667,19 @@ function renderBadgeContent(allBadges, contrat, btn, alertEl, todayEl) {
 async function deleteBadge(id) {
   if (!confirm('Supprimer ce badge ?')) return;
   await sbDelete('badges', `?id=eq.${id}`);
+  localStorage.removeItem(`badges_${today()}`);
+  await renderBadge();
+}
+
+async function editBadgeTime(id, ts) {
+  const d = new Date(ts);
+  const cur = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  const val = prompt('Heure du badge (HH:MM) :', cur);
+  if (!val) return;
+  const m = val.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m || +m[1] > 23 || +m[2] > 59) { alert('Format invalide. Exemple : 08:30'); return; }
+  d.setHours(+m[1], +m[2], 0, 0);
+  await sbPatch('badges', `?id=eq.${id}`, { timestamp: d.toISOString() });
   localStorage.removeItem(`badges_${today()}`);
   await renderBadge();
 }
@@ -975,6 +993,11 @@ async function init() {
 }
 
 init();
+
+// Service worker : app en cache pour un démarrage instantané
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
 </script>
 </body>
 </html>
