@@ -425,6 +425,14 @@ function localDateStr(d=new Date()) {
 }
 const today = () => localDateStr();
 
+// Minuit local (du jour) converti en ISO/UTC — pour filtrer les badges « d'aujourd'hui »
+// sans rater ceux badgés entre minuit et 2h locale (qui sont la veille en UTC).
+function dayStartISO() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
 // Convertit un timestamp Supabase (UTC) en date locale YYYY-MM-DD
 function tsToLocalDate(ts) {
   return localDateStr(new Date(ts));
@@ -463,7 +471,7 @@ async function renderAccueil() {
 
   const [ctData, badges] = await Promise.all([
     sbGet('contrat','?order=jour'),
-    sbGet('badges',`?timestamp=gte.${today()}T00:00:00&order=timestamp`)
+    sbGet('badges',`?timestamp=gte.${dayStartISO()}&order=timestamp`)
   ]);
   contrat = ctData;
 
@@ -577,12 +585,12 @@ async function renderBadge(fromCache = false) {
 
   if (!hasCache) {
     // Pas de cache : attendre le réseau normalement
-    allBadges = await sbGet('badges', `?timestamp=gte.${today()}T00:00:00&order=timestamp`);
+    allBadges = await sbGet('badges', `?timestamp=gte.${dayStartISO()}&order=timestamp`);
     cacheSet(cacheKey, allBadges);
   } else {
     // Affichage immédiat avec cache, rafraîchissement en arrière-plan
     renderBadgeContent(allBadges, contrat, btn, alertEl, todayEl);
-    sbGet('badges', `?timestamp=gte.${today()}T00:00:00&order=timestamp`).then(fresh => {
+    sbGet('badges', `?timestamp=gte.${dayStartISO()}&order=timestamp`).then(fresh => {
       cacheSet(cacheKey, fresh);
       if (JSON.stringify(fresh) !== JSON.stringify(allBadges))
         renderBadgeContent(fresh, contrat, btn, alertEl, todayEl);
@@ -706,7 +714,7 @@ async function doBadge() {
 
   try {
     // Vérifier le total des badges du jour (toutes personnes confondues)
-    const existing = await sbGet('badges', `?timestamp=gte.${today()}T00:00:00`);
+    const existing = await sbGet('badges', `?timestamp=gte.${dayStartISO()}`);
     if (!Array.isArray(existing)) { showErr('⚠️ Connexion impossible, réessaie'); return; }
     if (existing.length >= 2) { showErr('⚠️ Entrée et sortie déjà enregistrées'); return; }
 
