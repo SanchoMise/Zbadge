@@ -288,6 +288,8 @@
 <body>
 <!-- Switch caché : un vrai tap sur un label lié déclenche le retour haptique iOS 17.4+ -->
 <input type="checkbox" switch id="haptic-switch" class="haptic-switch" aria-hidden="true" tabindex="-1">
+<!-- Input heure caché : sert à ouvrir les rouleaux natifs iOS pour corriger l'heure d'un badge -->
+<input type="time" id="time-edit" class="haptic-switch" aria-hidden="true" tabindex="-1">
 <div class="app">
 
   <!-- ══ RÉSUMÉ ══ -->
@@ -679,17 +681,23 @@ async function deleteBadge(id) {
   await renderBadge();
 }
 
-async function editBadgeTime(id, ts) {
+function editBadgeTime(id, ts) {
   const d = new Date(ts);
-  const cur = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-  const val = prompt('Heure du badge (HH:MM) :', cur);
-  if (!val) return;
-  const m = val.trim().match(/^(\d{1,2}):(\d{2})$/);
-  if (!m || +m[1] > 23 || +m[2] > 59) { alert('Format invalide. Exemple : 08:30'); return; }
-  d.setHours(+m[1], +m[2], 0, 0);
-  await sbPatch('badges', `?id=eq.${id}`, { timestamp: d.toISOString() });
-  localStorage.removeItem(`badges_${today()}`);
-  await renderBadge();
+  const inp = document.getElementById('time-edit');
+  inp.value = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  inp.onchange = async () => {
+    inp.onchange = null;
+    if (!inp.value) return;
+    const [h, m] = inp.value.split(':').map(Number);
+    d.setHours(h, m, 0, 0);
+    await sbPatch('badges', `?id=eq.${id}`, { timestamp: d.toISOString() });
+    localStorage.removeItem(`badges_${today()}`);
+    await renderBadge();
+  };
+  // Ouvre les rouleaux natifs iOS (Safari 16+) ; repli sur focus/click si indisponible
+  if (inp.showPicker) { try { inp.showPicker(); return; } catch {} }
+  inp.focus();
+  inp.click();
 }
 
 let badging = false;
