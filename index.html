@@ -177,6 +177,14 @@
     .badge-entry:last-child { border-bottom: none; }
     .badge-type-lbl { font-size: 15px; color: var(--text2); }
     .badge-time-val { font-size: 17px; font-weight: 600; }
+    /* Heure éditable : vrai input time transparent superposé pour ouvrir les rouleaux iOS */
+    .badge-time-edit { position: relative; display: inline-flex; align-items: center; }
+    .badge-time-edit .badge-time-val { text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; }
+    .badge-time-edit input[type=time] {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      opacity: 0; border: none; padding: 0; margin: 0; cursor: pointer;
+      -webkit-appearance: none; appearance: none;
+    }
 
     /* ── Summary cells ── */
     .summary-grid {
@@ -288,8 +296,6 @@
 <body>
 <!-- Switch caché : un vrai tap sur un label lié déclenche le retour haptique iOS 17.4+ -->
 <input type="checkbox" switch id="haptic-switch" class="haptic-switch" aria-hidden="true" tabindex="-1">
-<!-- Input heure caché : sert à ouvrir les rouleaux natifs iOS pour corriger l'heure d'un badge -->
-<input type="time" id="time-edit" class="haptic-switch" aria-hidden="true" tabindex="-1">
 <div class="app">
 
   <!-- ══ RÉSUMÉ ══ -->
@@ -662,10 +668,15 @@ function renderBadgeContent(allBadges, contrat, btn, alertEl, todayEl) {
     let html = '<div class="card"><div class="card-title">Mes badges aujourd\'hui</div>';
     myBadges.forEach(b => {
       const type = globalIdx[b.id] === 0 ? 'Entrée' : 'Sortie';
+      const d = new Date(b.timestamp);
+      const hm = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
       html += `<div class="badge-entry">
         <span class="badge-type-lbl">${type}</span>
         <span style="display:flex;align-items:center;gap:12px">
-          <span class="badge-time-val" onclick="editBadgeTime('${b.id}','${b.timestamp}')" style="cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px">${fmt(b.timestamp)}</span>
+          <span class="badge-time-edit">
+            <span class="badge-time-val">${fmt(b.timestamp)}</span>
+            <input type="time" value="${hm}" onchange="setBadgeTime('${b.id}','${b.timestamp}',this.value)">
+          </span>
           <button onclick="deleteBadge('${b.id}')" style="border:none;background:none;color:var(--text2);font-size:20px;cursor:pointer;padding:0;line-height:1">×</button>
         </span>
       </div>`;
@@ -681,23 +692,14 @@ async function deleteBadge(id) {
   await renderBadge();
 }
 
-function editBadgeTime(id, ts) {
+async function setBadgeTime(id, ts, value) {
+  if (!value) return;
+  const [h, m] = value.split(':').map(Number);
   const d = new Date(ts);
-  const inp = document.getElementById('time-edit');
-  inp.value = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-  inp.onchange = async () => {
-    inp.onchange = null;
-    if (!inp.value) return;
-    const [h, m] = inp.value.split(':').map(Number);
-    d.setHours(h, m, 0, 0);
-    await sbPatch('badges', `?id=eq.${id}`, { timestamp: d.toISOString() });
-    localStorage.removeItem(`badges_${today()}`);
-    await renderBadge();
-  };
-  // Ouvre les rouleaux natifs iOS (Safari 16+) ; repli sur focus/click si indisponible
-  if (inp.showPicker) { try { inp.showPicker(); return; } catch {} }
-  inp.focus();
-  inp.click();
+  d.setHours(h, m, 0, 0);
+  await sbPatch('badges', `?id=eq.${id}`, { timestamp: d.toISOString() });
+  localStorage.removeItem(`badges_${today()}`);
+  await renderBadge();
 }
 
 let badging = false;

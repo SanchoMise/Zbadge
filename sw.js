@@ -1,5 +1,5 @@
 // Service worker : cache l'app pour un affichage instantané (stale-while-revalidate)
-const CACHE = 'creche-v1';
+const CACHE = 'creche-v2';
 const ASSETS = ['./', './index.html', './manifest.json', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
