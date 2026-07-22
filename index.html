@@ -666,6 +666,21 @@ function cacheGet(key, maxAgeMs = 60000) {
 }
 
 // ── Badge ─────────────────────────────────────────────────────
+// Carte affichée sur la page Badge quand la journée est marquée manuellement
+function overrideCard(ov) {
+  const map = {
+    ferme:  { emoji:'🔒', titre:'Crèche fermée', sous:'Journée non comptabilisée.' },
+    absent: { emoji:'🏠', titre:"Absent aujourd'hui", sous:'Journée comptée selon le contrat.' },
+    manuel: { emoji:'✏️', titre:'Horaires saisis', sous:`Entrée ${ov.heure_entree} · Sortie ${ov.heure_sortie}` },
+  };
+  const m = map[ov.type] || map.manuel;
+  return `<div class="card" style="text-align:center;padding:28px 20px">
+    <div style="font-size:48px;line-height:1;margin-bottom:10px">${m.emoji}</div>
+    <div style="font-size:20px;font-weight:700;margin-bottom:4px">${m.titre}</div>
+    <div style="color:var(--text2);font-size:15px">${m.sous}</div>
+  </div>`;
+}
+
 async function renderBadge(fromCache = false) {
   document.getElementById('badge-title').textContent = currentUser ? `Bonjour ${currentUser} 👋` : 'Bonjour 👋';
   const btn     = document.getElementById('badge-btn');
@@ -699,6 +714,22 @@ async function renderBadge(fromCache = false) {
   }
   activeZone.style.display = '';
   vacZone.style.display = 'none';
+
+  // ── Jour marqué manuellement (fermé / absent / manuel) → pas de badgeage ──
+  const ovKey = `ov_${today()}`;
+  let ovCached = cacheGet(ovKey, 60000);
+  if (ovCached === null) {
+    const rows = await sbGet('overrides', `?date=eq.${today()}`);
+    ovCached = (Array.isArray(rows) && rows.length) ? rows[0] : 'none';
+    cacheSet(ovKey, ovCached);
+  }
+  const ovToday = ovCached !== 'none' ? ovCached : null;
+  if (ovToday) {
+    activeZone.style.display = 'none';
+    vacZone.style.display = 'block';
+    vacZone.innerHTML = overrideCard(ovToday);
+    return;
+  }
 
   // Contrat : cache 24h (change rarement)
   if (contrat.length === 0) {
@@ -1169,12 +1200,14 @@ async function saveOverride(date) {
   const btn = document.getElementById(`et-save-${safeDate}`);
   btn.textContent = '…';
   await sbUpsert('overrides', data);
+  localStorage.removeItem(`ov_${date}`); // maj immédiate de la page Badge
   delete editorType[date];
   renderHistorique();
 }
 
 async function deleteOverride(date) {
   await sbDelete('overrides', `?date=eq.${date}`);
+  localStorage.removeItem(`ov_${date}`);
   delete editorType[date];
   renderHistorique();
 }
