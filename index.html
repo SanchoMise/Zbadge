@@ -483,6 +483,14 @@ function saisonBounds(s) {
   const a = parseInt(s.split('-')[0], 10);
   return { start: new Date(a, 8, 1, 0, 0, 0), end: new Date(a + 1, 7, 31, 23, 59, 59) }; // 1 sept → 31 août
 }
+// Début réel de comptabilisation : si l'app a été mise en place après le début de saison
+// (config.debut_compta = date ISO), on ne compte pas avant. Sans effet les saisons suivantes.
+function effectiveStart(seasonStart) {
+  const dc = appConfig.debut_compta;
+  if (!dc) return seasonStart;
+  const d = new Date(dc + 'T00:00:00');
+  return d > seasonStart ? d : seasonStart;
+}
 // Contrat applicable à une date (bon jour de semaine + bonne saison)
 function contratDay(date) {
   const dow = dowISO(date);
@@ -992,11 +1000,12 @@ async function renderSaison(el) {
 
   const { start, end } = saisonBounds(selected);
   const now  = new Date();
-  const last = end < now ? end : now; // ne pas compter le futur
+  const last = end < now ? end : now;             // ne pas compter le futur
+  const effStart = effectiveStart(start);          // ni avant la mise en place de l'app
 
   const [badges, overrides] = await Promise.all([
-    sbGet('badges', `?timestamp=gte.${start.toISOString()}&timestamp=lte.${end.toISOString()}&order=timestamp`),
-    sbGet('overrides', `?date=gte.${localDateStr(start)}&date=lte.${localDateStr(end)}&order=date`)
+    sbGet('badges', `?timestamp=gte.${effStart.toISOString()}&timestamp=lte.${end.toISOString()}&order=timestamp`),
+    sbGet('overrides', `?date=gte.${localDateStr(effStart)}&date=lte.${localDateStr(end)}&order=date`)
   ]);
 
   const byDate = {};
@@ -1005,7 +1014,7 @@ async function renderSaison(el) {
   const ovByDate = {};
   overrides.forEach(o => { ovByDate[o.date] = o; });
 
-  const days  = weekdaysBetween(start, last);
+  const days  = weekdaysBetween(effStart, last);
   const total = tallyTotals(days, byDate, ovByDate);
   const gCls  = total.ecart > 0 ? 'pos' : total.ecart < 0 ? 'neg' : '';
   const gSign = total.ecart >= 0 ? '+' : '-';
@@ -1017,8 +1026,10 @@ async function renderSaison(el) {
     const mm = (8 + i) % 12; // 8=septembre … puis rotation
     const mStart = new Date(my, mm, 1);
     const mEnd   = new Date(my, mm + 1, 0, 23, 59, 59);
-    if (mStart > last) continue;
-    const mDays = weekdaysBetween(mStart, mEnd < last ? mEnd : last);
+    const s = mStart < effStart ? effStart : mStart;
+    const e = mEnd   < last     ? mEnd     : last;
+    if (s > e) continue;
+    const mDays = weekdaysBetween(s, e);
     const mt = tallyTotals(mDays, byDate, ovByDate);
     if (mt.totalContrat === 0 && mt.totalReel === 0) continue;
     const mLabel = mStart.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
@@ -1033,6 +1044,10 @@ async function renderSaison(el) {
   const bilan = (Array.isArray(bilans) ? bilans : []).find(b => b.saison === selected);
   const clotureNote = bilan
     ? `<div class="empty" style="padding:8px 0 0">Année clôturée le ${new Date(bilan.cloture_le).toLocaleDateString('fr-FR')}</div>`
+    : '';
+  // Note si la comptabilisation démarre après le début de saison (mise en place de l'app)
+  const comptaNote = effStart > start
+    ? `<div class="empty" style="padding:8px 0 0">📱 Comptabilisation depuis la mise en place de l'app, le ${effStart.toLocaleDateString('fr-FR')}</div>`
     : '';
 
   const options = saisons.map(s =>
@@ -1056,6 +1071,7 @@ async function renderSaison(el) {
         <span class="row-label" style="font-weight:700;color:var(--text)">Total — ${total.nbJours} jours</span>
         <span class="row-value" style="font-weight:700">${total.totalReel > 0 ? m2hm(total.totalReel) : '–'}</span>
       </div>
+      ${comptaNote}
       ${clotureNote}
     </div>`;
 }
@@ -1234,14 +1250,15 @@ async function seasonTotals(saison) {
   const { start, end } = saisonBounds(saison);
   const now = new Date();
   const last = end < now ? end : now;
+  const effStart = effectiveStart(start);
   const [badges, overrides] = await Promise.all([
-    sbGet('badges', `?timestamp=gte.${start.toISOString()}&timestamp=lte.${end.toISOString()}&order=timestamp`),
-    sbGet('overrides', `?date=gte.${localDateStr(start)}&date=lte.${localDateStr(end)}&order=date`)
+    sbGet('badges', `?timestamp=gte.${effStart.toISOString()}&timestamp=lte.${end.toISOString()}&order=timestamp`),
+    sbGet('overrides', `?date=gte.${localDateStr(effStart)}&date=lte.${localDateStr(end)}&order=date`)
   ]);
   const byDate = {}; badges.forEach(b => { const d=tsToLocalDate(b.timestamp); (byDate[d] ??= []).push(b); });
   Object.keys(byDate).forEach(d => byDate[d].sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp)));
   const ovByDate = {}; overrides.forEach(o => { ovByDate[o.date] = o; });
-  return tallyTotals(weekdaysBetween(start, last), byDate, ovByDate);
+  return tallyTotals(weekdaysBetween(effStart, last), byDate, ovByDate);
 }
 
 async function cloturerAnnee() {

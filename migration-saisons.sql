@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS config (
 );
 INSERT INTO config (cle, valeur) VALUES
   ('mode',   'actif'),
-  ('saison', '2025-2026')
+  ('saison', '2025-2026'),
+  ('debut_compta', '2026-06-09')  -- 1er badge : on ne comptabilise pas avant la mise en place de l'app
 ON CONFLICT (cle) DO NOTHING;
 
 ALTER TABLE config ENABLE ROW LEVEL SECURITY;
