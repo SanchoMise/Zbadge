@@ -308,7 +308,9 @@
   <div class="view active" id="view-badge">
     <div class="page-title" id="badge-title">Bonjour 👋</div>
     <div id="badge-alert"></div>
-    <div class="qr-wrap">
+    <!-- Mode vacances : affiché à la place du QR quand l'année est clôturée -->
+    <div id="vacances-zone" style="display:none"></div>
+    <div class="qr-wrap" id="badge-active-zone">
       <svg class="qr" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" stroke="none">
         <rect width="21" height="21" fill="white"/>
         <path fill="black" d="M0,0h1v1h-1zM1,0h1v1h-1zM2,0h1v1h-1zM3,0h1v1h-1zM4,0h1v1h-1zM5,0h1v1h-1zM6,0h1v1h-1zM9,0h1v1h-1zM10,0h1v1h-1zM11,0h1v1h-1zM12,0h1v1h-1zM14,0h1v1h-1zM15,0h1v1h-1zM16,0h1v1h-1zM17,0h1v1h-1zM18,0h1v1h-1zM19,0h1v1h-1zM20,0h1v1h-1zM0,1h1v1h-1zM6,1h1v1h-1zM8,1h1v1h-1zM10,1h1v1h-1zM14,1h1v1h-1zM20,1h1v1h-1zM0,2h1v1h-1zM2,2h1v1h-1zM3,2h1v1h-1zM4,2h1v1h-1zM6,2h1v1h-1zM9,2h1v1h-1zM10,2h1v1h-1zM14,2h1v1h-1zM16,2h1v1h-1zM17,2h1v1h-1zM18,2h1v1h-1zM20,2h1v1h-1zM0,3h1v1h-1zM2,3h1v1h-1zM3,3h1v1h-1zM4,3h1v1h-1zM6,3h1v1h-1zM10,3h1v1h-1zM11,3h1v1h-1zM14,3h1v1h-1zM16,3h1v1h-1zM17,3h1v1h-1zM18,3h1v1h-1zM20,3h1v1h-1zM0,4h1v1h-1zM2,4h1v1h-1zM3,4h1v1h-1zM4,4h1v1h-1zM6,4h1v1h-1zM8,4h1v1h-1zM11,4h1v1h-1zM12,4h1v1h-1zM14,4h1v1h-1zM16,4h1v1h-1zM17,4h1v1h-1zM18,4h1v1h-1zM20,4h1v1h-1zM0,5h1v1h-1zM6,5h1v1h-1zM11,5h1v1h-1zM14,5h1v1h-1zM20,5h1v1h-1zM0,6h1v1h-1zM1,6h1v1h-1zM2,6h1v1h-1zM3,6h1v1h-1zM4,6h1v1h-1zM5,6h1v1h-1zM6,6h1v1h-1zM8,6h1v1h-1zM10,6h1v1h-1zM12,6h1v1h-1zM14,6h1v1h-1zM15,6h1v1h-1zM16,6h1v1h-1zM17,6h1v1h-1zM18,6h1v1h-1zM19,6h1v1h-1zM20,6h1v1h-1zM9,7h1v1h-1zM10,7h1v1h-1zM0,8h1v1h-1zM2,8h1v1h-1zM4,8h1v1h-1zM6,8h1v1h-1zM12,8h1v1h-1zM16,8h1v1h-1zM19,8h1v1h-1zM1,9h1v1h-1zM4,9h1v1h-1zM5,9h1v1h-1zM7,9h1v1h-1zM11,9h1v1h-1zM15,9h1v1h-1zM17,9h1v1h-1zM19,9h1v1h-1zM20,9h1v1h-1zM0,10h1v1h-1zM2,10h1v1h-1zM4,10h1v1h-1zM5,10h1v1h-1zM6,10h1v1h-1zM7,10h1v1h-1zM9,10h1v1h-1zM10,10h1v1h-1zM11,10h1v1h-1zM14,10h1v1h-1zM16,10h1v1h-1zM18,10h1v1h-1zM2,11h1v1h-1zM4,11h1v1h-1zM8,11h1v1h-1zM10,11h1v1h-1zM11,11h1v1h-1zM12,11h1v1h-1zM14,11h1v1h-1zM15,11h1v1h-1zM17,11h1v1h-1zM18,11h1v1h-1zM1,12h1v1h-1zM3,12h1v1h-1zM5,12h1v1h-1zM6,12h1v1h-1zM9,12h1v1h-1zM11,12h1v1h-1zM13,12h1v1h-1zM15,12h1v1h-1zM17,12h1v1h-1zM19,12h1v1h-1zM20,12h1v1h-1zM8,13h1v1h-1zM10,13h1v1h-1zM13,13h1v1h-1zM18,13h1v1h-1zM19,13h1v1h-1zM0,14h1v1h-1zM1,14h1v1h-1zM2,14h1v1h-1zM3,14h1v1h-1zM4,14h1v1h-1zM5,14h1v1h-1zM6,14h1v1h-1zM10,14h1v1h-1zM12,14h1v1h-1zM13,14h1v1h-1zM14,14h1v1h-1zM16,14h1v1h-1zM18,14h1v1h-1zM0,15h1v1h-1zM6,15h1v1h-1zM10,15h1v1h-1zM13,15h1v1h-1zM15,15h1v1h-1zM20,15h1v1h-1zM0,16h1v1h-1zM2,16h1v1h-1zM3,16h1v1h-1zM4,16h1v1h-1zM6,16h1v1h-1zM8,16h1v1h-1zM9,16h1v1h-1zM12,16h1v1h-1zM16,16h1v1h-1zM17,16h1v1h-1zM20,16h1v1h-1zM0,17h1v1h-1zM2,17h1v1h-1zM3,17h1v1h-1zM4,17h1v1h-1zM6,17h1v1h-1zM10,17h1v1h-1zM11,17h1v1h-1zM13,17h1v1h-1zM19,17h1v1h-1zM0,18h1v1h-1zM2,18h1v1h-1zM3,18h1v1h-1zM4,18h1v1h-1zM6,18h1v1h-1zM8,18h1v1h-1zM11,18h1v1h-1zM14,18h1v1h-1zM16,18h1v1h-1zM20,18h1v1h-1zM0,19h1v1h-1zM6,19h1v1h-1zM10,19h1v1h-1zM11,19h1v1h-1zM12,19h1v1h-1zM13,19h1v1h-1zM15,19h1v1h-1zM16,19h1v1h-1zM18,19h1v1h-1zM19,19h1v1h-1zM20,19h1v1h-1zM0,20h1v1h-1zM1,20h1v1h-1zM2,20h1v1h-1zM3,20h1v1h-1zM4,20h1v1h-1zM5,20h1v1h-1zM6,20h1v1h-1zM8,20h1v1h-1zM9,20h1v1h-1zM10,20h1v1h-1zM11,20h1v1h-1zM14,20h1v1h-1zM15,20h1v1h-1zM18,20h1v1h-1zM20,20h1v1h-1z"/>
@@ -322,8 +324,9 @@
   <div class="view" id="view-historique">
     <div class="page-title">Historique</div>
     <div class="seg-ctrl">
-      <div class="seg-btn active" onclick="setHistoTab('semaine',this)">Cette semaine</div>
-      <div class="seg-btn" onclick="setHistoTab('mois',this)">Ce mois</div>
+      <div class="seg-btn active" onclick="setHistoTab('semaine',this)">Semaine</div>
+      <div class="seg-btn" onclick="setHistoTab('mois',this)">Mois</div>
+      <div class="seg-btn" onclick="setHistoTab('annee',this)">Année</div>
     </div>
     <div id="histo-content"><div class="loading">Chargement…</div></div>
   </div>
@@ -339,9 +342,14 @@
       </div>
     </div>
     <div class="card">
-      <div class="card-title">Contrat hebdomadaire</div>
+      <div class="card-title" id="contract-title">Contrat hebdomadaire</div>
+      <div id="contract-banner"></div>
       <div id="contract-editor"><div class="loading">Chargement…</div></div>
       <button class="save-btn" id="save-btn" onclick="saveContract()">Enregistrer</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Fin d'année</div>
+      <div id="cloture-zone"></div>
     </div>
   </div>
 
@@ -460,6 +468,93 @@ function weekStart(date=new Date()) {
   return d;
 }
 
+// ── Saisons (années scolaires : septembre → août) ─────────────
+function saisonForDate(date = new Date()) {
+  const d = (typeof date === 'string') ? new Date(date + 'T12:00:00') : new Date(date);
+  const y = d.getFullYear();
+  const start = (d.getMonth() + 1) >= 9 ? y : y - 1; // septembre = mois 9
+  return `${start}-${start + 1}`;
+}
+function nextSaison(s) {
+  const a = parseInt(s.split('-')[1], 10);
+  return `${a}-${a + 1}`;
+}
+function saisonBounds(s) {
+  const a = parseInt(s.split('-')[0], 10);
+  return { start: new Date(a, 8, 1, 0, 0, 0), end: new Date(a + 1, 7, 31, 23, 59, 59) }; // 1 sept → 31 août
+}
+// Contrat applicable à une date (bon jour de semaine + bonne saison)
+function contratDay(date) {
+  const dow = dowISO(date);
+  if (!dow) return null;
+  const s = saisonForDate(date);
+  return contrat.find(r => r.jour === dow && (r.saison === s || r.saison == null)) || null;
+}
+
+// ── Config partagée (mode + saison courante), stockée dans Supabase ──
+let appConfig = { mode: 'actif', saison: saisonForDate() };
+async function loadConfig() {
+  const rows = await sbGet('config', '');
+  if (Array.isArray(rows)) rows.forEach(r => { appConfig[r.cle] = r.valeur; });
+  return appConfig;
+}
+async function setConfig(cle, valeur) {
+  appConfig[cle] = valeur;
+  await sbUpsert('config', { cle, valeur });
+}
+
+// ── Calcul d'une journée (source unique, partagée Historique + Bilan) ──
+function dayTally(date, byDate, ovByDate) {
+  const c = contratDay(date);
+  const contratMins = c ? t2m(c.heure_depart) - t2m(c.heure_arrivee) : 0;
+  const ov = ovByDate[date];
+  let entreeReel = '–', sortieReel = '–', reelMins = null, delta = null, type = 'normal';
+  if (ov?.type === 'ferme') {
+    type = 'ferme';
+  } else if (ov?.type === 'absent') {
+    type = 'absent';
+    entreeReel = c?.heure_arrivee ?? '–'; sortieReel = c?.heure_depart ?? '–';
+    reelMins = contratMins; delta = 0;
+  } else if (ov?.type === 'manuel') {
+    type = 'manuel';
+    entreeReel = ov.heure_entree; sortieReel = ov.heure_sortie;
+    reelMins = t2m(ov.heure_sortie) - t2m(ov.heure_entree); delta = reelMins - contratMins;
+  } else {
+    const allB = byDate[date] ?? [];
+    entreeReel = allB.length >= 1 ? fmt(allB[0].timestamp) : '–';
+    sortieReel = allB.length >= 2 ? fmt(allB[allB.length - 1].timestamp) : '–';
+    if (allB.length >= 2) {
+      reelMins = Math.round((new Date(allB[allB.length - 1].timestamp) - new Date(allB[0].timestamp)) / 60000);
+      delta = reelMins - contratMins;
+    }
+  }
+  return { c, contratMins, ov, type, entreeReel, sortieReel, reelMins, delta };
+}
+
+// Totaux sur une liste de jours (mêmes règles que l'historique)
+function tallyTotals(days, byDate, ovByDate) {
+  let totalContrat = 0, totalReel = 0, nbJours = 0;
+  days.forEach(date => {
+    const t = dayTally(date, byDate, ovByDate);
+    if (t.type === 'ferme') return;      // jour fermé exclu
+    totalContrat += t.contratMins;
+    if (t.reelMins !== null) { totalReel += t.reelMins; nbJours++; }
+  });
+  return { totalContrat, totalReel, ecart: totalReel - totalContrat, nbJours };
+}
+
+// Jours ouvrés (lun–ven) entre deux dates incluses
+function weekdaysBetween(start, end) {
+  const days = [];
+  const cur = new Date(start); cur.setHours(12, 0, 0, 0);
+  const last = new Date(end); last.setHours(23, 59, 59, 999);
+  while (cur <= last) {
+    if (cur.getDay() >= 1 && cur.getDay() <= 5) days.push(localDateStr(cur));
+    cur.setDate(cur.getDate() + 1);
+  }
+  return days;
+}
+
 // ── Navigation ────────────────────────────────────────────────
 function showView(name) {
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -489,7 +584,7 @@ async function renderAccueil() {
   if (dow === 0) {
     html += '<div class="card"><p class="empty">Week-end 🎉</p></div>';
   } else {
-    const c = contrat.find(r=>r.jour===dow);
+    const c = contratDay(now);
     if (c) {
       const arrMin = t2m(c.heure_arrivee), depMin = t2m(c.heure_depart);
       const nowMin = now.getHours()*60 + now.getMinutes();
@@ -524,7 +619,7 @@ async function renderAccueil() {
 
   // ── Bilan du jour si entrée + sortie enregistrées ──
   if (badges.length >= 2 && dow !== 0) {
-    const c = contrat.find(r => r.jour === dow);
+    const c = contratDay(now);
     if (c) {
       const reelMins   = Math.round((new Date(badges[badges.length-1].timestamp) - new Date(badges[0].timestamp)) / 60000);
       const contratMins = t2m(c.heure_depart) - t2m(c.heure_arrivee);
@@ -543,11 +638,12 @@ async function renderAccueil() {
 }
 
 // ── Prochain jour ouvré ──────────────────────────────────────
-function nextWeekdayDow(from) {
+function nextWeekdayDate(from) {
   const d = new Date(from);
   do { d.setDate(d.getDate() + 1); } while (d.getDay() === 0 || d.getDay() === 6);
-  return d.getDay(); // 1–5
+  return d;
 }
+function nextWeekdayDow(from) { return nextWeekdayDate(from).getDay(); }
 
 // ── Cache localStorage ────────────────────────────────────────
 function cacheSet(key, data) {
@@ -576,6 +672,25 @@ async function renderBadge(fromCache = false) {
     btn.classList.add('is-disabled');
     return;
   }
+
+  // ── Mode vacances : on masque le QR/badge et on affiche l'écran de vacances ──
+  const activeZone = document.getElementById('badge-active-zone');
+  const vacZone    = document.getElementById('vacances-zone');
+  if (appConfig.mode === 'vacances') {
+    activeZone.style.display = 'none';
+    vacZone.style.display = 'block';
+    const prochaine = nextSaison(appConfig.saison);
+    vacZone.innerHTML = `
+      <div class="card" style="text-align:center;padding:32px 20px">
+        <div style="font-size:56px;line-height:1;margin-bottom:12px">☀️</div>
+        <div style="font-size:22px;font-weight:700;margin-bottom:6px">Bonnes vacances !</div>
+        <div style="color:var(--text2);font-size:15px;margin-bottom:24px">L'année ${appConfig.saison} est clôturée.<br>Le badgeage reprendra à la rentrée.</div>
+        <button class="badge-btn" onclick="preparerNouvelleSaison()">Préparer l'année ${prochaine}</button>
+      </div>`;
+    return;
+  }
+  activeZone.style.display = '';
+  vacZone.style.display = 'none';
 
   // Contrat : cache 24h (change rarement)
   if (contrat.length === 0) {
@@ -623,16 +738,17 @@ function renderBadgeContent(allBadges, contrat, btn, alertEl, todayEl) {
   // ── Bandeau heure prévue ──
   const now    = new Date();
   const dow    = dowISO(now);
-  const c      = contrat.find(r => r.jour === dow);
+  const c      = contratDay(now);
   const nowMin = now.getHours() * 60 + now.getMinutes();
 
   // Journée finie = 2 badges enregistrés (pas juste l'heure dépassée)
   const journeeFinie = allBadges.length >= 2;
 
   if (dow === 0 || journeeFinie) {
-    // Afficher l'entrée du prochain jour ouvré
-    const nextDow  = nextWeekdayDow(now);
-    const cNext    = contrat.find(r => r.jour === nextDow);
+    // Afficher l'entrée du prochain jour ouvré (contrat de sa saison)
+    const nextDate = nextWeekdayDate(now);
+    const nextDow  = nextDate.getDay();
+    const cNext    = contratDay(nextDate);
     // "demain" uniquement si le lendemain calendaire est un jour ouvré
     const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
     const nextLabel = localDateStr(tomorrow) && nextDow === tomorrow.getDay()
@@ -750,9 +866,13 @@ function setHistoTab(tab, el) {
   renderHistorique();
 }
 
+let saisonSelectionnee = null; // saison affichée dans l'onglet Année (null = courante)
+
 async function renderHistorique() {
   const el = document.getElementById('histo-content');
   el.innerHTML = '<div class="loading">Chargement…</div>';
+
+  if (histoTab === 'annee') { await renderSaison(el); return; }
 
   const now   = new Date();
   const start = histoTab === 'semaine'
@@ -788,50 +908,20 @@ async function renderHistorique() {
   }
 
   let totalContrat = 0, totalReel = 0;
+  const PILLS = {
+    ferme:  '<span style="font-size:11px;background:#e5e5ea;color:#6e6e73;padding:2px 8px;border-radius:20px;font-weight:600">FERMÉ</span>',
+    absent: '<span style="font-size:11px;background:#fff2d4;color:#7a4800;padding:2px 8px;border-radius:20px;font-weight:600">ABSENT</span>',
+    manuel: '<span style="font-size:11px;background:#e8f4fd;color:#0056b3;padding:2px 8px;border-radius:20px;font-weight:600">MANUEL</span>',
+  };
 
   const cards = days.map(date => {
-    const dow  = dowISO(date);
-    const c    = contrat.find(r => r.jour === dow);
-    const contratMins = c ? t2m(c.heure_depart) - t2m(c.heure_arrivee) : 0;
-    const ov   = ovByDate[date];
-    const dayLabel = new Date(date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
-
-    let entreeReel, sortieReel, reelMins = null, delta = null, badge = '', pill = '';
-
-    if (ov?.type === 'ferme') {
-      // Jour fermé — exclu des totaux
-      entreeReel = '–'; sortieReel = '–';
-      badge = '<span style="font-size:11px;background:#e5e5ea;color:#6e6e73;padding:2px 8px;border-radius:20px;font-weight:600">FERMÉ</span>';
-    } else if (ov?.type === 'absent') {
-      // Absent — compté comme contrat, écart = 0
+    const { c, contratMins, ov, type, entreeReel, sortieReel, reelMins, delta } = dayTally(date, byDate, ovByDate);
+    if (type !== 'ferme') {
       totalContrat += contratMins;
-      totalReel    += contratMins;
-      entreeReel = c?.heure_arrivee ?? '–';
-      sortieReel = c?.heure_depart  ?? '–';
-      reelMins   = contratMins;
-      delta      = 0;
-      badge = '<span style="font-size:11px;background:#fff2d4;color:#7a4800;padding:2px 8px;border-radius:20px;font-weight:600">ABSENT</span>';
-    } else if (ov?.type === 'manuel') {
-      // Saisie manuelle
-      totalContrat += contratMins;
-      entreeReel = ov.heure_entree;
-      sortieReel = ov.heure_sortie;
-      reelMins   = t2m(ov.heure_sortie) - t2m(ov.heure_entree);
-      totalReel += reelMins;
-      delta = reelMins - contratMins;
-      badge = '<span style="font-size:11px;background:#e8f4fd;color:#0056b3;padding:2px 8px;border-radius:20px;font-weight:600">MANUEL</span>';
-    } else {
-      // Normal — badges
-      totalContrat += contratMins;
-      const allB = byDate[date] ?? [];
-      entreeReel = allB.length >= 1 ? fmt(allB[0].timestamp) : '–';
-      sortieReel = allB.length >= 2 ? fmt(allB[allB.length-1].timestamp) : '–';
-      if (allB.length >= 2) {
-        reelMins = Math.round((new Date(allB[allB.length-1].timestamp) - new Date(allB[0].timestamp)) / 60000);
-        totalReel += reelMins;
-        delta = reelMins - contratMins;
-      }
+      if (reelMins !== null) totalReel += reelMins;
     }
+    const dayLabel = new Date(date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+    const badge    = PILLS[type] || '';
 
     const dStyle   = delta === null ? '' : delta > 5 ? 'color:var(--orange);font-weight:600' : delta < -5 ? 'color:var(--green);font-weight:600' : '';
     const deltaStr = delta !== null ? (delta >= 0 ? '+' : '-') + m2hm(Math.abs(delta)) : '–';
@@ -878,6 +968,98 @@ async function renderHistorique() {
   el.innerHTML = html;
 }
 
+// ── Résumé d'une saison (année scolaire) ──────────────────────
+function changeSaison(val) { saisonSelectionnee = val; renderHistorique(); }
+
+async function renderSaison(el) {
+  // Charger contrat, bilans figés et config en parallèle
+  const [ctData, bilans] = await Promise.all([
+    sbGet('contrat', '?order=jour'),
+    sbGet('bilans', '?order=saison.desc')
+  ]);
+  contrat = ctData;
+
+  // Saisons disponibles : celles ayant un contrat, un bilan, + la saison courante
+  const set = new Set();
+  (Array.isArray(ctData) ? ctData : []).forEach(r => r.saison && set.add(r.saison));
+  (Array.isArray(bilans) ? bilans : []).forEach(b => set.add(b.saison));
+  set.add(appConfig.saison || saisonForDate());
+  const saisons = [...set].sort().reverse();
+
+  const selected = saisonSelectionnee && saisons.includes(saisonSelectionnee)
+    ? saisonSelectionnee
+    : (saisons.includes(appConfig.saison) ? appConfig.saison : saisons[0]);
+
+  const { start, end } = saisonBounds(selected);
+  const now  = new Date();
+  const last = end < now ? end : now; // ne pas compter le futur
+
+  const [badges, overrides] = await Promise.all([
+    sbGet('badges', `?timestamp=gte.${start.toISOString()}&timestamp=lte.${end.toISOString()}&order=timestamp`),
+    sbGet('overrides', `?date=gte.${localDateStr(start)}&date=lte.${localDateStr(end)}&order=date`)
+  ]);
+
+  const byDate = {};
+  badges.forEach(b => { const d = tsToLocalDate(b.timestamp); (byDate[d] ??= []).push(b); });
+  Object.keys(byDate).forEach(d => byDate[d].sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp)));
+  const ovByDate = {};
+  overrides.forEach(o => { ovByDate[o.date] = o; });
+
+  const days  = weekdaysBetween(start, last);
+  const total = tallyTotals(days, byDate, ovByDate);
+  const gCls  = total.ecart > 0 ? 'pos' : total.ecart < 0 ? 'neg' : '';
+  const gSign = total.ecart >= 0 ? '+' : '-';
+
+  // Découpage par mois (septembre → août)
+  const moisRows = [];
+  for (let i = 0; i < 12; i++) {
+    const my = start.getFullYear() + (8 + i >= 12 ? 1 : 0);
+    const mm = (8 + i) % 12; // 8=septembre … puis rotation
+    const mStart = new Date(my, mm, 1);
+    const mEnd   = new Date(my, mm + 1, 0, 23, 59, 59);
+    if (mStart > last) continue;
+    const mDays = weekdaysBetween(mStart, mEnd < last ? mEnd : last);
+    const mt = tallyTotals(mDays, byDate, ovByDate);
+    if (mt.totalContrat === 0 && mt.totalReel === 0) continue;
+    const mLabel = mStart.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    const eSign  = mt.ecart >= 0 ? '+' : '-';
+    const eCls   = mt.ecart > 5 ? 'color:var(--orange)' : mt.ecart < -5 ? 'color:var(--green)' : 'color:var(--text2)';
+    moisRows.push(`<div class="row" style="align-items:baseline">
+      <span class="row-label" style="text-transform:capitalize">${mLabel}</span>
+      <span class="row-value">${m2hm(mt.totalReel)} <span style="font-size:12px;${eCls}">(${eSign}${m2hm(Math.abs(mt.ecart))})</span></span>
+    </div>`);
+  }
+
+  const bilan = (Array.isArray(bilans) ? bilans : []).find(b => b.saison === selected);
+  const clotureNote = bilan
+    ? `<div class="empty" style="padding:8px 0 0">Année clôturée le ${new Date(bilan.cloture_le).toLocaleDateString('fr-FR')}</div>`
+    : '';
+
+  const options = saisons.map(s =>
+    `<option value="${s}" ${s===selected?'selected':''}>Année ${s}</option>`).join('');
+
+  el.innerHTML = `
+    <div class="card" style="padding:10px 12px;margin-bottom:12px">
+      <select onchange="changeSaison(this.value)" style="width:100%;border:none;background:none;font-size:16px;font-weight:600;color:var(--text);padding:6px 2px">
+        ${options}
+      </select>
+    </div>
+    <div class="summary-grid">
+      <div class="sum-cell"><div class="sum-val">${m2hm(total.totalContrat)}</div><div class="sum-lbl">Contrat</div></div>
+      <div class="sum-cell"><div class="sum-val">${total.totalReel > 0 ? m2hm(total.totalReel) : '–'}</div><div class="sum-lbl">Réel</div></div>
+      <div class="sum-cell"><div class="sum-val ${gCls}">${total.totalReel > 0 ? gSign + m2hm(Math.abs(total.ecart)) : '–'}</div><div class="sum-lbl">Écart</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Détail par mois</div>
+      ${moisRows.length ? moisRows.join('') : '<div class="empty">Aucune donnée pour cette année</div>'}
+      <div class="row" style="border-top:2px solid var(--border);margin-top:6px;padding-top:10px">
+        <span class="row-label" style="font-weight:700;color:var(--text)">Total — ${total.nbJours} jours</span>
+        <span class="row-value" style="font-weight:700">${total.totalReel > 0 ? m2hm(total.totalReel) : '–'}</span>
+      </div>
+      ${clotureNote}
+    </div>`;
+}
+
 // ── Éditeur de jour ───────────────────────────────────────────
 function toggleEditor(date) {
   const safeDate = date.replace(/-/g,'_');
@@ -885,7 +1067,7 @@ function toggleEditor(date) {
   if (!el) return;
   if (el.style.display !== 'none') { el.style.display = 'none'; return; }
 
-  const c = contrat.find(r => r.jour === dowISO(date));
+  const c = contratDay(date);
   el.style.display = 'block';
   el.innerHTML = `
     <div style="border-top:1px solid var(--border);padding:12px 0;margin-bottom:8px">
@@ -956,25 +1138,54 @@ async function deleteOverride(date) {
 }
 
 // ── Réglages ──────────────────────────────────────────────────
+let editingSaison = null; // saison éditée dans Réglages (null = saison courante)
+
 async function renderReglages() {
   ['Bertrand','Cyrielle'].forEach(n => {
     document.getElementById('btn-'+n).classList.toggle('active', currentUser===n);
   });
 
   if (contrat.length === 0) {
-    contrat = await sbGet('contrat','?order=jour');
-    if (!contrat || contrat.length === 0) contrat = DEFAULT_CONTRAT;
+    contrat = await sbGet('contrat','?order=jour') || [];
   }
+
+  const editing  = editingSaison || appConfig.saison || saisonForDate();
+  const nouvelle = editing !== (appConfig.saison || saisonForDate());
+
+  document.getElementById('contract-title').textContent = `Contrat hebdomadaire — ${editing}`;
+
+  // Bannière si on prépare une nouvelle saison
+  document.getElementById('contract-banner').innerHTML = nouvelle
+    ? `<div class="alert green" style="margin-bottom:12px">🎒 Nouveaux horaires pour l'année <strong>${editing}</strong>. Enregistre pour démarrer l'année.</div>`
+    : '';
+
+  // Pré-remplissage : contrat de la saison éditée, sinon celui de la saison précédente, sinon défaut
+  const rowsFor = s => (Array.isArray(contrat) ? contrat.filter(r => r.saison === s) : []);
+  const source  = rowsFor(editing).length ? rowsFor(editing)
+                : rowsFor(appConfig.saison).length ? rowsFor(appConfig.saison)
+                : DEFAULT_CONTRAT;
 
   const el = document.getElementById('contract-editor');
   el.innerHTML = JOURS.map((nom, i) => {
-    const c = contrat.find(r=>r.jour===i+1) ?? DEFAULT_CONTRAT[i];
+    const c = source.find(r => r.jour === i+1) ?? DEFAULT_CONTRAT[i];
     return `<div class="cedit-row">
       <div class="day-lbl">${nom}</div>
       <input class="time-inp" type="time" id="arr-${i+1}" value="${c.heure_arrivee}" title="Entrée">
       <input class="time-inp" type="time" id="dep-${i+1}" value="${c.heure_depart}" title="Sortie">
     </div>`;
   }).join('');
+
+  // Zone de fin d'année (clôture / état vacances)
+  const cz = document.getElementById('cloture-zone');
+  if (appConfig.mode === 'vacances') {
+    cz.innerHTML = `
+      <div class="empty" style="padding:4px 0 12px">L'année ${appConfig.saison} est clôturée (mode vacances).</div>
+      <button class="save-btn" style="background:var(--border);color:var(--text)" onclick="annulerCloture()">Annuler la clôture</button>`;
+  } else {
+    cz.innerHTML = `
+      <div class="empty" style="padding:4px 0 12px">Clôture l'année ${appConfig.saison} : enregistre un bilan figé et passe l'app en mode vacances jusqu'à la rentrée.</div>
+      <button class="save-btn" style="background:var(--red)" onclick="cloturerAnnee()">Clôturer l'année ${appConfig.saison}</button>`;
+  }
 }
 
 function setUser(name) {
@@ -990,25 +1201,82 @@ async function saveContract() {
   btn.textContent = 'Enregistrement…';
   btn.disabled = true;
 
+  const editing = editingSaison || appConfig.saison || saisonForDate();
   const rows = JOURS.map((_,i) => ({
+    saison: editing,
     jour: i+1,
     heure_arrivee: document.getElementById(`arr-${i+1}`).value,
     heure_depart:  document.getElementById(`dep-${i+1}`).value,
   }));
 
   await sbUpsert('contrat', rows);
-  contrat = rows;
+  contrat = await sbGet('contrat','?order=jour') || [];
+  localStorage.removeItem('contrat'); // invalide le cache badge
+
+  // Si on démarrait une nouvelle saison → elle devient la saison courante, fin des vacances
+  const nouvelle = editing !== (appConfig.saison || saisonForDate());
+  if (nouvelle) {
+    await setConfig('saison', editing);
+    if (appConfig.mode === 'vacances') await setConfig('mode', 'actif');
+    editingSaison = null;
+    saisonSelectionnee = null;
+    btn.textContent = '✓ Année démarrée';
+    setTimeout(() => { btn.textContent = 'Enregistrer'; btn.disabled = false; showView('badge'); }, 1200);
+    return;
+  }
+
   btn.textContent = '✓ Enregistré';
   setTimeout(() => { btn.textContent = 'Enregistrer'; btn.disabled = false; }, 2000);
 }
 
+// ── Clôture / reprise d'année ─────────────────────────────────
+async function seasonTotals(saison) {
+  const { start, end } = saisonBounds(saison);
+  const now = new Date();
+  const last = end < now ? end : now;
+  const [badges, overrides] = await Promise.all([
+    sbGet('badges', `?timestamp=gte.${start.toISOString()}&timestamp=lte.${end.toISOString()}&order=timestamp`),
+    sbGet('overrides', `?date=gte.${localDateStr(start)}&date=lte.${localDateStr(end)}&order=date`)
+  ]);
+  const byDate = {}; badges.forEach(b => { const d=tsToLocalDate(b.timestamp); (byDate[d] ??= []).push(b); });
+  Object.keys(byDate).forEach(d => byDate[d].sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp)));
+  const ovByDate = {}; overrides.forEach(o => { ovByDate[o.date] = o; });
+  return tallyTotals(weekdaysBetween(start, last), byDate, ovByDate);
+}
+
+async function cloturerAnnee() {
+  const s = appConfig.saison;
+  if (!confirm(`Clôturer l'année ${s} ?\nUn bilan sera enregistré et l'app passera en mode vacances.`)) return;
+  if (contrat.length === 0) contrat = await sbGet('contrat','?order=jour') || [];
+  const t = await seasonTotals(s);
+  await sbUpsert('bilans', {
+    saison: s,
+    total_contrat_min: t.totalContrat,
+    total_reel_min: t.totalReel,
+    ecart_min: t.ecart,
+    nb_jours: t.nbJours,
+    cloture_le: new Date().toISOString(),
+  });
+  await setConfig('mode', 'vacances');
+  alert(`Année ${s} clôturée ✅\nRéel : ${m2hm(t.totalReel)} · Écart : ${t.ecart>=0?'+':'-'}${m2hm(Math.abs(t.ecart))}`);
+  renderReglages();
+}
+
+async function annulerCloture() {
+  await setConfig('mode', 'actif');
+  renderReglages();
+}
+
+function preparerNouvelleSaison() {
+  editingSaison = nextSaison(appConfig.saison);
+  showView('reglages');
+}
+
 // ── Init ──────────────────────────────────────────────────────
 async function init() {
-  contrat = await sbGet('contrat','?order=jour');
-  if (!contrat || contrat.length === 0) {
-    await sbUpsert('contrat', DEFAULT_CONTRAT);
-    contrat = DEFAULT_CONTRAT;
-  }
+  const [ct] = await Promise.all([ sbGet('contrat','?order=jour'), loadConfig() ]);
+  contrat = ct || [];
+  if (!appConfig.saison) appConfig.saison = saisonForDate();
   if (!currentUser) {
     showView('reglages');
   } else {
