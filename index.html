@@ -867,10 +867,18 @@ async function doBadge() {
 }
 
 // ── Historique ────────────────────────────────────────────────
+let histoOffset = 0; // 0 = période courante, négatif = passé (semaines/mois)
+
 function setHistoTab(tab, el) {
   histoTab = tab;
+  histoOffset = 0; // on repart sur la période courante à chaque changement d'onglet
   document.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
+  renderHistorique();
+}
+
+function histoNav(delta) {
+  histoOffset = Math.min(0, histoOffset + delta); // jamais dans le futur
   renderHistorique();
 }
 
@@ -882,16 +890,26 @@ async function renderHistorique() {
 
   if (histoTab === 'annee') { await renderSaison(el); return; }
 
-  const now   = new Date();
-  const start = histoTab === 'semaine'
-    ? weekStart(now)
-    : new Date(now.getFullYear(), now.getMonth(), 1);
+  const now = new Date();
+  let start, end, periodLabel;
+  if (histoTab === 'semaine') {
+    start = weekStart(now); start.setDate(start.getDate() + histoOffset * 7);
+    end   = new Date(start); end.setDate(end.getDate() + 6); end.setHours(23,59,59,999);
+    const vendredi = new Date(start); vendredi.setDate(vendredi.getDate() + 4);
+    periodLabel = histoOffset === 0 ? 'Cette semaine'
+      : `${start.toLocaleDateString('fr-FR',{day:'numeric',month:'short'})} – ${vendredi.toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}`;
+  } else {
+    start = new Date(now.getFullYear(), now.getMonth() + histoOffset, 1);
+    end   = new Date(start.getFullYear(), start.getMonth() + 1, 0, 23,59,59,999);
+    periodLabel = histoOffset === 0 ? 'Ce mois'
+      : start.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+  }
+  const last = end < now ? end : now; // ne pas compter le futur
 
-  const startIso = start.toISOString();
   const [ctData, badges, overrides] = await Promise.all([
     sbGet('contrat','?order=jour'),
-    sbGet('badges', `?timestamp=gte.${startIso}&order=timestamp`),
-    sbGet('overrides', `?date=gte.${localDateStr(start)}&order=date`)
+    sbGet('badges', `?timestamp=gte.${start.toISOString()}&timestamp=lte.${end.toISOString()}&order=timestamp`),
+    sbGet('overrides', `?date=gte.${localDateStr(start)}&date=lte.${localDateStr(end)}&order=date`)
   ]);
   contrat = ctData;
 
@@ -907,13 +925,15 @@ async function renderHistorique() {
   const ovByDate = {};
   overrides.forEach(o => { ovByDate[o.date] = o; });
 
-  // Weekdays in range
-  const days = [];
-  const cur = new Date(start);
-  while (cur <= now) {
-    if (cur.getDay() >= 1 && cur.getDay() <= 5) days.push(localDateStr(cur));
-    cur.setDate(cur.getDate() + 1);
-  }
+  // Jours ouvrés de la période (jusqu'à aujourd'hui pour la période courante)
+  const days = weekdaysBetween(start, last);
+
+  // Peut-on reculer encore ? (pas avant la mise en place de l'app)
+  const dc = appConfig.debut_compta ? new Date(appConfig.debut_compta + 'T00:00:00') : null;
+  const floor = !dc ? null : (histoTab === 'semaine'
+    ? weekStart(dc)
+    : new Date(dc.getFullYear(), dc.getMonth(), 1));
+  const canPrev = !floor || start > floor;
 
   let totalContrat = 0, totalReel = 0;
   const PILLS = {
@@ -967,12 +987,18 @@ async function renderHistorique() {
   const gCls  = globalDelta > 0 ? 'pos' : globalDelta < 0 ? 'neg' : '';
   const gSign = globalDelta >= 0 ? '+' : '-';
 
-  let html = `<div class="summary-grid">
+  const navBtn = 'width:38px;height:38px;border:none;border-radius:10px;background:var(--card);font-size:18px;cursor:pointer;color:var(--text)';
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <button style="${navBtn}${canPrev ? '' : ';opacity:.3;pointer-events:none'}" onclick="histoNav(-1)">◀</button>
+      <span style="font-size:15px;font-weight:600;text-transform:capitalize">${periodLabel}</span>
+      <button style="${navBtn}${histoOffset < 0 ? '' : ';opacity:.3;pointer-events:none'}" onclick="histoNav(1)">▶</button>
+    </div>`;
+  html += `<div class="summary-grid">
     <div class="sum-cell"><div class="sum-val">${m2hm(totalContrat)}</div><div class="sum-lbl">Contrat</div></div>
     <div class="sum-cell"><div class="sum-val">${totalReel > 0 ? m2hm(totalReel) : '–'}</div><div class="sum-lbl">Réel</div></div>
     <div class="sum-cell"><div class="sum-val ${gCls}">${totalReel > 0 ? gSign + m2hm(Math.abs(globalDelta)) : '–'}</div><div class="sum-lbl">Écart</div></div>
   </div>`;
-  html += cards.join('');
+  html += cards.length ? cards.join('') : '<div class="card"><div class="empty">Aucun jour sur cette période</div></div>';
   el.innerHTML = html;
 }
 
