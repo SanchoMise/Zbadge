@@ -401,6 +401,7 @@ const DEFAULT_CONTRAT = [
 let currentUser = localStorage.getItem('creche_user');
 let contrat = [];
 let histoTab = 'semaine';
+let ovTodayState = null; // override du jour (fermé/absent/manuel), pour la page Badge
 
 // ── Supabase REST ─────────────────────────────────────────────
 const H = { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' };
@@ -580,11 +581,13 @@ async function renderAccueil() {
   const now = new Date();
   const dow = dowISO(now);
 
-  const [ctData, badges] = await Promise.all([
+  const [ctData, badges, ovRows] = await Promise.all([
     sbGet('contrat','?order=jour'),
-    sbGet('badges',`?timestamp=gte.${dayStartISO()}&order=timestamp`)
+    sbGet('badges',`?timestamp=gte.${dayStartISO()}&order=timestamp`),
+    sbGet('overrides',`?date=eq.${today()}`)
   ]);
   contrat = ctData;
+  const ovToday = (Array.isArray(ovRows) && ovRows.length) ? ovRows[0] : null;
 
   let html = '';
 
@@ -607,23 +610,27 @@ async function renderAccueil() {
     }
   }
 
-  // ── Badges du jour + bilan si journée complète ──
-  html += `<div class="card"><div class="card-title">Badges aujourd'hui</div>`;
-  if (badges.length === 0) {
-    html += '<div class="empty">Aucun badge pour l\'instant</div>';
+  // ── Jour marqué (fermé/absent/manuel) → carte info à la place des badges ──
+  if (ovToday) {
+    html += overrideCard(ovToday);
   } else {
-    badges.forEach((b, i) => {
-      const type = i === 0 ? 'Entrée' : 'Sortie';
-      html += `<div class="badge-entry">
-        <div>
-          <div style="font-size:15px;font-weight:500">${b.utilisateur}</div>
-          <div class="badge-type-lbl">${type}</div>
-        </div>
-        <div class="badge-time-val">${fmt(b.timestamp)}</div>
-      </div>`;
-    });
+    html += `<div class="card"><div class="card-title">Badges aujourd'hui</div>`;
+    if (badges.length === 0) {
+      html += '<div class="empty">Aucun badge pour l\'instant</div>';
+    } else {
+      badges.forEach((b, i) => {
+        const type = i === 0 ? 'Entrée' : 'Sortie';
+        html += `<div class="badge-entry">
+          <div>
+            <div style="font-size:15px;font-weight:500">${b.utilisateur}</div>
+            <div class="badge-type-lbl">${type}</div>
+          </div>
+          <div class="badge-time-val">${fmt(b.timestamp)}</div>
+        </div>`;
+      });
+    }
+    html += '</div>';
   }
-  html += '</div>';
 
   // ── Bilan du jour si entrée + sortie enregistrées ──
   if (badges.length >= 2 && dow !== 0) {
@@ -715,7 +722,8 @@ async function renderBadge(fromCache = false) {
   activeZone.style.display = '';
   vacZone.style.display = 'none';
 
-  // ── Jour marqué manuellement (fermé / absent / manuel) → pas de badgeage ──
+  // Jour marqué manuellement (fermé / absent / manuel) : on garde le QR,
+  // mais on affichera l'entrée du prochain jour ouvré plutôt que le rappel du jour.
   const ovKey = `ov_${today()}`;
   let ovCached = cacheGet(ovKey, 60000);
   if (ovCached === null) {
@@ -723,13 +731,7 @@ async function renderBadge(fromCache = false) {
     ovCached = (Array.isArray(rows) && rows.length) ? rows[0] : 'none';
     cacheSet(ovKey, ovCached);
   }
-  const ovToday = ovCached !== 'none' ? ovCached : null;
-  if (ovToday) {
-    activeZone.style.display = 'none';
-    vacZone.style.display = 'block';
-    vacZone.innerHTML = overrideCard(ovToday);
-    return;
-  }
+  ovTodayState = ovCached !== 'none' ? ovCached : null;
 
   // Contrat : cache 24h (change rarement)
   if (contrat.length === 0) {
@@ -780,8 +782,9 @@ function renderBadgeContent(allBadges, contrat, btn, alertEl, todayEl) {
   const c      = contratDay(now);
   const nowMin = now.getHours() * 60 + now.getMinutes();
 
-  // Journée finie = 2 badges enregistrés (pas juste l'heure dépassée)
-  const journeeFinie = allBadges.length >= 2;
+  // Journée finie = 2 badges enregistrés, OU jour marqué (fermé/absent/manuel)
+  // → dans les deux cas on affiche l'entrée du prochain jour ouvré.
+  const journeeFinie = allBadges.length >= 2 || !!ovTodayState;
 
   if (dow === 0 || journeeFinie) {
     // Afficher l'entrée du prochain jour ouvré (contrat de sa saison)

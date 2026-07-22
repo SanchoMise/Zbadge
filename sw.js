@@ -1,5 +1,5 @@
 // Service worker : cache l'app pour un affichage instantané (et hors-ligne)
-const CACHE = 'creche-v7';
+const CACHE = 'creche-v8';
 const ASSETS = ['./', './index.html', './manifest.json', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
