@@ -318,6 +318,7 @@
       <label class="badge-btn" id="badge-btn" for="haptic-switch" onclick="doBadge()">Je badge</label>
       <div id="badge-today" style="width:100%"></div>
     </div>
+    <div id="codes-rappel" style="text-align:center;color:var(--text2);font-size:13px;line-height:1.8;margin-top:20px"></div>
   </div>
 
   <!-- ══ HISTORIQUE ══ -->
@@ -688,8 +689,32 @@ function overrideCard(ov) {
   </div>`;
 }
 
+// ── Rappel des codes (modifiables d'un tap, stockés dans la config partagée) ──
+const CODES_DEFAUT = { code_entree: '12A09', code_poussettes: '2459A' };
+
+function renderCodes() {
+  const el = document.getElementById('codes-rappel');
+  if (!el) return;
+  const entree     = appConfig.code_entree     || CODES_DEFAUT.code_entree;
+  const poussettes = appConfig.code_poussettes || CODES_DEFAUT.code_poussettes;
+  const val = v => `<strong style="color:var(--text);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px">${v}</strong>`;
+  el.innerHTML = `
+    <span onclick="editCode('code_entree')" style="cursor:pointer">Entrée : ${val(entree)}</span><br>
+    <span onclick="editCode('code_poussettes')" style="cursor:pointer">Local Poussettes : ${val(poussettes)}</span>`;
+}
+
+async function editCode(cle) {
+  const actuel = appConfig[cle] || CODES_DEFAUT[cle] || '';
+  const label = cle === 'code_entree' ? "code d'entrée" : 'code du local poussettes';
+  const val = prompt(`Nouveau ${label} :`, actuel);
+  if (val === null) return;
+  await setConfig(cle, val.trim());
+  renderCodes();
+}
+
 async function renderBadge(fromCache = false) {
   document.getElementById('badge-title').textContent = currentUser ? `Bonjour ${currentUser} 👋` : 'Bonjour 👋';
+  renderCodes();
   const btn     = document.getElementById('badge-btn');
   const alertEl = document.getElementById('badge-alert');
   const todayEl = document.getElementById('badge-today');
