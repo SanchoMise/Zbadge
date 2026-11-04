@@ -508,8 +508,16 @@ function contratDay(date) {
 // ── Config partagée (mode + saison courante), stockée dans Supabase ──
 let appConfig = { mode: 'actif', saison: saisonForDate() };
 async function loadConfig() {
-  const rows = await sbGet('config', '');
-  if (Array.isArray(rows)) rows.forEach(r => { appConfig[r.cle] = r.valeur; });
+  try {
+    const rows = await sbGet('config', '');
+    if (Array.isArray(rows)) {
+      rows.forEach(r => { appConfig[r.cle] = r.valeur; });
+      cacheSet('config', rows); // pour le mode hors-ligne
+    }
+  } catch {
+    const cached = cacheGet('config', 7 * 86400000); // jusqu'à 7 jours
+    if (Array.isArray(cached)) cached.forEach(r => { appConfig[r.cle] = r.valeur; });
+  }
   return appConfig;
 }
 async function setConfig(cle, valeur) {
@@ -677,6 +685,52 @@ function cacheGet(key, maxAgeMs = 60000) {
   return null;
 }
 
+// ── File d'attente hors-ligne ─────────────────────────────────
+// Un badge est d'abord stocké localement (marche sans réseau), puis synchronisé.
+function getPending() {
+  try { return JSON.parse(localStorage.getItem('pending_badges')) || []; } catch { return []; }
+}
+function setPending(arr) {
+  try { localStorage.setItem('pending_badges', JSON.stringify(arr)); } catch {}
+}
+function addPending(item) { const a = getPending(); a.push(item); setPending(a); }
+function pendingToday() { return getPending().filter(b => tsToLocalDate(b.timestamp) === today()); }
+
+// Badges du jour déjà connus localement (cache serveur + en attente), même hors-ligne
+function cachedBadgesToday() {
+  try { return JSON.parse(localStorage.getItem(`badges_${today()}`))?.d || []; } catch { return []; }
+}
+function knownTodayCount() {
+  return cachedBadgesToday().length + pendingToday().length;
+}
+
+// Fusionne les badges serveur avec les badges en attente (pour l'affichage)
+function withPending(serverBadges) {
+  const base = Array.isArray(serverBadges) ? serverBadges.slice() : [];
+  const serverTs = new Set(base.map(b => b.timestamp));
+  pendingToday().forEach(p => { if (!serverTs.has(p.timestamp)) base.push({ ...p, _pending: true }); });
+  base.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  return base;
+}
+
+let flushing = false;
+async function flushPending() {
+  if (flushing) return;
+  const queue = getPending();
+  if (queue.length === 0) return;
+  flushing = true;
+  const rest = [];
+  for (const item of queue) {
+    try {
+      const res = await sbPost('badges', { utilisateur: item.utilisateur, timestamp: item.timestamp });
+      if (!Array.isArray(res) || res.length === 0) rest.push(item); // échec → on garde en attente
+    } catch { rest.push(item); }
+  }
+  setPending(rest);
+  flushing = false;
+  if (rest.length < queue.length) localStorage.removeItem(`badges_${today()}`); // du neuf a été synchronisé
+}
+
 // ── Badge ─────────────────────────────────────────────────────
 // Carte affichée sur la page Badge quand la journée est marquée manuellement
 function overrideCard(ov) {
@@ -756,7 +810,8 @@ async function renderBadge(fromCache = false) {
   const ovKey = `ov_${today()}`;
   let ovCached = cacheGet(ovKey, 60000);
   if (ovCached === null) {
-    const rows = await sbGet('overrides', `?date=eq.${today()}`);
+    let rows = [];
+    try { rows = await sbGet('overrides', `?date=eq.${today()}`); } catch { rows = []; }
     ovCached = (Array.isArray(rows) && rows.length) ? rows[0] : 'none';
     cacheSet(ovKey, ovCached);
   }
@@ -766,41 +821,42 @@ async function renderBadge(fromCache = false) {
   if (contrat.length === 0) {
     contrat = cacheGet('contrat', 86400000) ?? [];
     if (contrat.length === 0) {
-      contrat = await sbGet('contrat','?order=jour');
-      cacheSet('contrat', contrat);
+      try { contrat = await sbGet('contrat','?order=jour'); } catch { contrat = []; }
+      if (Array.isArray(contrat) && contrat.length) cacheSet('contrat', contrat);
+      else contrat = Array.isArray(contrat) ? contrat : [];
     }
   }
 
-  // Badges du jour : affichage immédiat depuis cache (max 30s), puis rafraîchissement réseau
+  // Badges du jour : cache + badges en attente affichés immédiatement, puis rafraîchissement réseau
   const cacheKey = `badges_${today()}`;
-  let allBadges = cacheGet(cacheKey, 30000) ?? [];
-  const hasCache = allBadges.length > 0 || localStorage.getItem(cacheKey);
+  const serverCached = cacheGet(cacheKey, 30000) ?? [];
+  const hasCache = serverCached.length > 0 || localStorage.getItem(cacheKey);
 
   if (!hasCache) {
-    // Pas de cache : attendre le réseau normalement
-    allBadges = await sbGet('badges', `?timestamp=gte.${dayStartISO()}&order=timestamp`);
-    cacheSet(cacheKey, allBadges);
+    // Pas de cache serveur : on tente le réseau, mais on affiche quand même les badges en attente
+    let fresh = [];
+    try { fresh = await sbGet('badges', `?timestamp=gte.${dayStartISO()}&order=timestamp`); } catch { fresh = []; }
+    if (Array.isArray(fresh)) cacheSet(cacheKey, fresh); else fresh = [];
+    renderBadgeContent(withPending(fresh), contrat, btn, alertEl, todayEl);
   } else {
-    // Affichage immédiat avec cache, rafraîchissement en arrière-plan
-    renderBadgeContent(allBadges, contrat, btn, alertEl, todayEl);
+    // Affichage immédiat (cache + en attente), rafraîchissement en arrière-plan
+    renderBadgeContent(withPending(serverCached), contrat, btn, alertEl, todayEl);
     sbGet('badges', `?timestamp=gte.${dayStartISO()}&order=timestamp`).then(fresh => {
+      if (!Array.isArray(fresh)) return;
       cacheSet(cacheKey, fresh);
-      if (JSON.stringify(fresh) !== JSON.stringify(allBadges))
-        renderBadgeContent(fresh, contrat, btn, alertEl, todayEl);
-    });
-    return;
+      renderBadgeContent(withPending(fresh), contrat, btn, alertEl, todayEl);
+    }).catch(() => {});
   }
-
-  renderBadgeContent(allBadges, contrat, btn, alertEl, todayEl);
 }
 
 function renderBadgeContent(allBadges, contrat, btn, alertEl, todayEl) {
   // Mes badges uniquement pour l'affichage
   const myBadges = allBadges.filter(b => b.utilisateur === currentUser);
 
-  // Index global de chaque badge (1er = Entrée, 2e = Sortie)
-  const globalIdx = {};
-  allBadges.forEach((b, i) => { globalIdx[b.id] = i; });
+  // Index global de chaque badge (1er = Entrée, 2e = Sortie), par horodatage
+  // (les badges en attente n'ont pas encore d'id serveur).
+  const globalIdx = new Map();
+  allBadges.forEach((b, i) => globalIdx.set(b.timestamp, i));
 
   btn.classList.remove('is-disabled');
   btn.textContent = 'Je badge';
@@ -854,19 +910,30 @@ function renderBadgeContent(allBadges, contrat, btn, alertEl, todayEl) {
   if (myBadges.length > 0) {
     let html = '<div class="card"><div class="card-title">Mes badges aujourd\'hui</div>';
     myBadges.forEach(b => {
-      const type = globalIdx[b.id] === 0 ? 'Entrée' : 'Sortie';
+      const type = globalIdx.get(b.timestamp) === 0 ? 'Entrée' : 'Sortie';
       const d = new Date(b.timestamp);
       const hm = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-      html += `<div class="badge-entry">
-        <span class="badge-type-lbl">${type}</span>
-        <span style="display:flex;align-items:center;gap:12px">
-          <span class="badge-time-edit">
+      if (b._pending) {
+        // Badge enregistré hors-ligne, pas encore synchronisé
+        html += `<div class="badge-entry">
+          <span class="badge-type-lbl">${type}</span>
+          <span style="display:flex;align-items:center;gap:10px">
             <span class="badge-time-val">${fmt(b.timestamp)}</span>
-            <input type="time" value="${hm}" onchange="setBadgeTime('${b.id}','${b.timestamp}',this.value)">
+            <span style="font-size:11px;color:var(--orange);font-weight:600;white-space:nowrap">⏳ à synchroniser</span>
           </span>
-          <button onclick="deleteBadge('${b.id}')" style="border:none;background:none;color:var(--text2);font-size:20px;cursor:pointer;padding:0;line-height:1">×</button>
-        </span>
-      </div>`;
+        </div>`;
+      } else {
+        html += `<div class="badge-entry">
+          <span class="badge-type-lbl">${type}</span>
+          <span style="display:flex;align-items:center;gap:12px">
+            <span class="badge-time-edit">
+              <span class="badge-time-val">${fmt(b.timestamp)}</span>
+              <input type="time" value="${hm}" onchange="setBadgeTime('${b.id}','${b.timestamp}',this.value)">
+            </span>
+            <button onclick="deleteBadge('${b.id}')" style="border:none;background:none;color:var(--text2);font-size:20px;cursor:pointer;padding:0;line-height:1">×</button>
+          </span>
+        </div>`;
+      }
     });
     todayEl.innerHTML = html + '</div>';
   }
@@ -899,31 +966,38 @@ async function doBadge() {
   badging = true;
   const btn = document.getElementById('badge-btn');
 
-  const showErr = msg => {
+  const flash = (msg, bg) => {
     btn.textContent = msg;
-    btn.style.background = 'var(--red)';
+    btn.style.background = bg || '';
     setTimeout(() => {
       btn.textContent = 'Je badge';
       btn.style.background = '';
       btn.classList.remove('is-disabled');
-    }, 3000);
+    }, 2500);
   };
 
   try {
-    // Vérifier le total des badges du jour (toutes personnes confondues)
-    const existing = await sbGet('badges', `?timestamp=gte.${dayStartISO()}`);
-    if (!Array.isArray(existing)) { showErr('⚠️ Connexion impossible, réessaie'); return; }
-    if (existing.length >= 2) { showErr('⚠️ Entrée et sortie déjà enregistrées'); return; }
+    // Nombre de badges connus localement (cache serveur + en attente), même hors-ligne
+    if (knownTodayCount() >= 2) { flash('⚠️ Entrée et sortie déjà enregistrées', 'var(--red)'); return; }
 
     btn.classList.add('is-disabled');
     btn.textContent = '…';
-    const res = await sbPost('badges', { utilisateur: currentUser, timestamp: new Date().toISOString() });
-    // Supabase renvoie un tableau des lignes créées en cas de succès, sinon un objet d'erreur
-    if (!Array.isArray(res) || res.length === 0) { showErr('⚠️ Enregistrement échoué, réessaie'); return; }
+
+    // 1) Enregistrement LOCAL immédiat → marche même sans réseau
+    addPending({ utilisateur: currentUser, timestamp: new Date().toISOString() });
     localStorage.removeItem(`badges_${today()}`);
+
+    // 2) Tentative de synchro immédiate (sans bloquer si hors-ligne)
+    await flushPending();
     await renderBadge();
+
+    // Retour visuel : synchronisé ou en attente
+    if (pendingToday().length > 0) flash('✓ Enregistré (hors-ligne)', 'var(--orange)');
+    else flash('✓ Badgé', 'var(--green)');
   } catch {
-    showErr('⚠️ Pas de connexion, réessaie');
+    // En dernier recours le badge reste dans la file d'attente locale
+    await renderBadge();
+    flash('✓ Enregistré (hors-ligne)', 'var(--orange)');
   } finally {
     badging = false;
   }
@@ -1382,9 +1456,16 @@ function preparerNouvelleSaison() {
 
 // ── Init ──────────────────────────────────────────────────────
 async function init() {
-  const [ct] = await Promise.all([ sbGet('contrat','?order=jour'), loadConfig() ]);
-  contrat = ct || [];
+  await loadConfig(); // tolérant au hors-ligne (cache interne)
+  try {
+    const ct = await sbGet('contrat','?order=jour');
+    contrat = Array.isArray(ct) ? ct : [];
+    if (contrat.length) cacheSet('contrat', contrat);
+  } catch {
+    contrat = cacheGet('contrat', 7 * 86400000) ?? [];
+  }
   if (!appConfig.saison) appConfig.saison = saisonForDate();
+  flushPending().catch(() => {}); // synchronise les badges en attente au démarrage
   if (!currentUser) {
     showView('reglages');
   } else {
@@ -1393,6 +1474,13 @@ async function init() {
 }
 
 init();
+
+// Synchronisation automatique dès que le réseau revient
+window.addEventListener('online', () => {
+  flushPending().then(() => {
+    if (document.getElementById('view-badge').classList.contains('active')) renderBadge();
+  }).catch(() => {});
+});
 
 // Service worker : app en cache pour un démarrage instantané
 if ('serviceWorker' in navigator) {
