@@ -906,9 +906,14 @@ function renderBadgeContent(allBadges, contrat, btn, alertEl, todayEl) {
     </div>`;
   }
 
-  // ── Mes badges du jour ──
+  // ── Badges du jour : les miens (éditables) + ceux de l'autre parent (lecture seule) ──
+  const otherUser   = currentUser === 'Bertrand' ? 'Cyrielle' : 'Bertrand';
+  const otherBadges = allBadges.filter(b => b.utilisateur === otherUser);
+  let html = '';
+
+  // Mes badges (éditables)
   if (myBadges.length > 0) {
-    let html = '<div class="card"><div class="card-title">Mes badges aujourd\'hui</div>';
+    html += '<div class="card"><div class="card-title">Mes badges aujourd\'hui</div>';
     myBadges.forEach(b => {
       const type = globalIdx.get(b.timestamp) === 0 ? 'Entrée' : 'Sortie';
       const d = new Date(b.timestamp);
@@ -935,8 +940,29 @@ function renderBadgeContent(allBadges, contrat, btn, alertEl, todayEl) {
         </div>`;
       }
     });
-    todayEl.innerHTML = html + '</div>';
+    html += '</div>';
   }
+
+  // Badges de l'autre parent (lecture seule, distinction par couleur + prénom)
+  const showOtherEmpty = otherBadges.length === 0 && dow !== 0 && !ovTodayState && !journeeFinie;
+  if (otherBadges.length > 0 || showOtherEmpty) {
+    html += `<div class="card" style="border-left:3px solid var(--accent)">
+      <div class="card-title" style="color:var(--accent)">${otherUser} aujourd'hui</div>`;
+    if (otherBadges.length === 0) {
+      html += `<div class="empty">Pas encore badgé</div>`;
+    } else {
+      otherBadges.forEach(b => {
+        const type = globalIdx.get(b.timestamp) === 0 ? 'Entrée' : 'Sortie';
+        html += `<div class="badge-entry">
+          <span class="badge-type-lbl">${type}</span>
+          <span class="badge-time-val">${fmt(b.timestamp)}</span>
+        </div>`;
+      });
+    }
+    html += '</div>';
+  }
+
+  todayEl.innerHTML = html;
 } // fin renderBadgeContent
 
 async function deleteBadge(id) {
