@@ -906,63 +906,45 @@ function renderBadgeContent(allBadges, contrat, btn, alertEl, todayEl) {
     </div>`;
   }
 
-  // ── Badges du jour : les miens (éditables) + ceux de l'autre parent (lecture seule) ──
-  const otherUser   = currentUser === 'Bertrand' ? 'Cyrielle' : 'Bertrand';
-  const otherBadges = allBadges.filter(b => b.utilisateur === otherUser);
-  let html = '';
+  // ── Badges du jour : une seule carte, Entrée/Sortie avec le prénom de qui a badgé ──
+  // Mes badges restent éditables/supprimables ; ceux de l'autre parent en lecture seule.
+  const anyBadges = allBadges.length > 0;
+  const showEmpty = !anyBadges && dow !== 0 && !ovTodayState && !journeeFinie;
 
-  // Mes badges (éditables)
-  if (myBadges.length > 0) {
-    html += '<div class="card"><div class="card-title">Mes badges aujourd\'hui</div>';
-    myBadges.forEach(b => {
-      const type = globalIdx.get(b.timestamp) === 0 ? 'Entrée' : 'Sortie';
-      const d = new Date(b.timestamp);
-      const hm = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-      if (b._pending) {
-        // Badge enregistré hors-ligne, pas encore synchronisé
-        html += `<div class="badge-entry">
-          <span class="badge-type-lbl">${type}</span>
-          <span style="display:flex;align-items:center;gap:10px">
-            <span class="badge-time-val">${fmt(b.timestamp)}</span>
-            <span style="font-size:11px;color:var(--orange);font-weight:600;white-space:nowrap">⏳ à synchroniser</span>
-          </span>
-        </div>`;
-      } else {
-        html += `<div class="badge-entry">
-          <span class="badge-type-lbl">${type}</span>
-          <span style="display:flex;align-items:center;gap:12px">
-            <span class="badge-time-edit">
-              <span class="badge-time-val">${fmt(b.timestamp)}</span>
-              <input type="time" value="${hm}" onchange="setBadgeTime('${b.id}','${b.timestamp}',this.value)">
-            </span>
-            <button onclick="deleteBadge('${b.id}')" style="border:none;background:none;color:var(--text2);font-size:20px;cursor:pointer;padding:0;line-height:1">×</button>
-          </span>
-        </div>`;
-      }
-    });
-    html += '</div>';
-  }
-
-  // Badges de l'autre parent (lecture seule, distinction par couleur + prénom)
-  const showOtherEmpty = otherBadges.length === 0 && dow !== 0 && !ovTodayState && !journeeFinie;
-  if (otherBadges.length > 0 || showOtherEmpty) {
-    html += `<div class="card" style="border-left:3px solid var(--accent)">
-      <div class="card-title" style="color:var(--accent)">${otherUser} aujourd'hui</div>`;
-    if (otherBadges.length === 0) {
-      html += `<div class="empty">Pas encore badgé</div>`;
+  if (anyBadges || showEmpty) {
+    let html = '<div class="card"><div class="card-title">Badges aujourd\'hui</div>';
+    if (!anyBadges) {
+      html += '<div class="empty">Aucun badge pour l\'instant</div>';
     } else {
-      otherBadges.forEach(b => {
-        const type = globalIdx.get(b.timestamp) === 0 ? 'Entrée' : 'Sortie';
-        html += `<div class="badge-entry">
-          <span class="badge-type-lbl">${type}</span>
-          <span class="badge-time-val">${fmt(b.timestamp)}</span>
-        </div>`;
+      allBadges.forEach((b, i) => {
+        const type  = i === 0 ? 'Entrée' : 'Sortie';
+        const mine  = b.utilisateur === currentUser;
+        const d     = new Date(b.timestamp);
+        const hm    = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        const label = `<span class="badge-type-lbl">${type} <span style="color:var(--text2);font-weight:400">(${b.utilisateur})</span></span>`;
+        let right;
+        if (mine && b._pending) {
+          right = `<span style="display:flex;align-items:center;gap:10px">
+              <span class="badge-time-val">${fmt(b.timestamp)}</span>
+              <span style="font-size:11px;color:var(--orange);font-weight:600;white-space:nowrap">⏳ à synchroniser</span>
+            </span>`;
+        } else if (mine) {
+          right = `<span style="display:flex;align-items:center;gap:12px">
+              <span class="badge-time-edit">
+                <span class="badge-time-val">${fmt(b.timestamp)}</span>
+                <input type="time" value="${hm}" onchange="setBadgeTime('${b.id}','${b.timestamp}',this.value)">
+              </span>
+              <button onclick="deleteBadge('${b.id}')" style="border:none;background:none;color:var(--text2);font-size:20px;cursor:pointer;padding:0;line-height:1">×</button>
+            </span>`;
+        } else {
+          right = `<span class="badge-time-val">${fmt(b.timestamp)}</span>`;
+        }
+        html += `<div class="badge-entry">${label}${right}</div>`;
       });
     }
     html += '</div>';
+    todayEl.innerHTML = html;
   }
-
-  todayEl.innerHTML = html;
 } // fin renderBadgeContent
 
 async function deleteBadge(id) {
